@@ -33,5 +33,10 @@ from django.urls import path, include
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("goods/", include("goods.urls")), # 添加前缀， localhost:8000/goods/ + goods 的路由
-    path("users/", include("users.urls")),
+
+    # 路由前缀的别名，也叫命名空间, 
+    # namespace 是include 里面的，不是path里面的参数
+    # 填写 namespace 方便于 reverse 做站内跳转
+    path("users/", include("users.urls", namespace="users")),
+    
 ]

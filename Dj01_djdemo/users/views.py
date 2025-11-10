@@ -202,3 +202,33 @@ def setHeaders(request):
 
     return response
 
+
+
+# 站外 实现页面的跳转，重定向
+from django.http.response import HttpResponseRedirect # 302 临时重定向
+from django.http.response import HttpResponsePermanentRedirect # 301 永久重定向
+
+def zhanWaiRedirect(request):
+
+    # response = HttpResponse("ok", status=302)
+    # response["Location"] = "https://www.baidu.com"
+    # return response
+
+
+    return HttpResponseRedirect("https://www.baidu.com")
+
+
+
+# 站内 跳转
+from django.shortcuts import redirect  # 根据指定的url地址，进行页面跳转
+from django.urls import reverse  # 根据路由别名，反向解析生成ur地址
+
+def zhanNeiRedirect(request):
+    # # 基于 reverse + redirect 对路由别名进行反向解析进行跳转
+
+    # # users 对应 主应用中主路由的 namespace : meta 对应 子应用中的子路由的 name
+    url = reverse("users:meta") 
+    return redirect(url)
+    
+    # # 除了要跳转正则路由以外，其他的路径直接写上去即可，不需要使用reverse进行解析
+    # return redirect("/users/meta/")
