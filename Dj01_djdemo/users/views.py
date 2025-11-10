@@ -111,25 +111,65 @@ def getHeaderData(request):
     # }
 
     # 获取自定义请求头, 两种方式
-    print(request.META.get("HTTP_MYHEADER")) # xxyyxx， 不推荐使用
-    print(request.headers.get("myheader")) # xxyyxx
+    print(request.META.get("HTTP_MYHEADER"))  # xxyyxx， 不推荐使用
+    print(request.headers.get("myheader"))  # xxyyxx
     return HttpResponse("ok")
+
 
 # 上传文件
 def getFile(request):
     # 获取上传文件，可以接收多个文件
-    print(request.FILES) # 只能接受POST 请求上传的文件，其他请求不可以
+    print(request.FILES)  # 只能接受POST 请求上传的文件，其他请求不可以
     # <MultiValueDict: {'file': [<InMemoryUploadedFile: aa.txt (text/plain)>]}>
 
-
-    print(request.FILES.get("file")) # aa.txt
+    print(request.FILES.get("file"))  # aa.txt
     file = request.FILES.get("file")
-    print(file, type(file)) # aa.txt <class 'django.core.files.uploadedfile.InMemoryUploadedFile'>
+    print(
+        file, type(file)
+    )  # aa.txt <class 'django.core.files.uploadedfile.InMemoryUploadedFile'>
 
     files = request.FILES.getlist("file")
-    print(files) # [<InMemoryUploadedFile: aa.txt (text/plain)>, <InMemoryUploadedFile: init.sh (application/x-sh)>]
+    print(
+        files
+    )  # [<InMemoryUploadedFile: aa.txt (text/plain)>, <InMemoryUploadedFile: init.sh (application/x-sh)>]
 
     for file in request.FILES.getlist("file"):
-        with open(f'./{file.name}', 'wb') as f: # 当前路径
-            f.write(file.read()) # 写入文件操作
+        with open(f"./{file.name}", "wb") as f:  # 当前路径
+            f.write(file.read())  # 写入文件操作
     return HttpResponse("ok")
+
+
+from django.http.response import HttpResponse
+
+
+def getResponseHTML(request):
+    # 响应 HTML
+    return HttpResponse(
+        content="<h1>hello world</h1>",
+        content_type="text/html",
+        status=201,
+        header={"token": "asdf"},
+    )
+
+
+def getResponseJSON(request):
+    ## 响应 JSON
+    # data = {"username": "admin", "password": "password"}
+    # data = [
+    #     {"username": "admin", "password": "password"},
+    #     {"username": "ubuntu", "password": "password"},
+    # ]
+    # import json
+    # json_data = json.dumps(data)
+    # return HttpResponse(content=json_data, content_type="text/json")
+
+    from django.http.response import JsonResponse
+    data = {"username": "admin", "password": "password"},
+    data = [
+        {"username": "admin", "password": "password"},
+        {"username": "ubuntu", "password": "password"},
+    ]
+
+    # JsonResponse 内部实现了 json_data = json.dumps(data)
+    # JsonResponse 并不直接支持列表转换成 json 格式，需要关闭安全监测，把 safe 参数的值设置为 False.
+    return JsonResponse(data, safe=False) 

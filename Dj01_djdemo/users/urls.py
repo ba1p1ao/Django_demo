@@ -8,5 +8,8 @@ urlpatterns = [
     path("body/", views.getRequestBody),
     path("meta/", views.getHeaderData),
     path("file/", views.getFile),
+    path("reshtml/", views.getResponseHTML),
+    path("resjson/", views.getResponseJSON),
+    path("file/", views.getFile),
 
 ]
