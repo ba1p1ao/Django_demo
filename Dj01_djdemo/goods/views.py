@@ -5,5 +5,5 @@ from django.http.response import HttpResponse
 
 
 def index(request):
-    data = {"msg": "success"}
-    return HttpResponse(data)
+    data = "<h1>hello world</h1>"
+    return HttpResponse(data, content_type="text/html")
