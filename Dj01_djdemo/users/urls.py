@@ -4,4 +4,5 @@ from users import views
 urlpatterns = [
     path("index/", views.index),
     path("users/", views.users),
+    path("info/", views.getAllarges),
 ]
