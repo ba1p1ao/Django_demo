@@ -4,6 +4,8 @@ from users import views
 urlpatterns = [
     path("index/", views.index),
     path("users/", views.users),
-    path("info/", views.getAllarges),
+    path("args/", views.getAllargs),
     path("body/", views.getRequestBody),
+    path("meta/", views.getHeaderData),
+
 ]
