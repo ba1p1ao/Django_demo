@@ -1,2 +1,2 @@
 # Django_demo
-Django联系
+Django练习
