@@ -7,5 +7,6 @@ urlpatterns = [
     path("args/", views.getAllargs),
     path("body/", views.getRequestBody),
     path("meta/", views.getHeaderData),
+    path("file/", views.getFile),
 
 ]

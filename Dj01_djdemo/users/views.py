@@ -114,3 +114,22 @@ def getHeaderData(request):
     print(request.META.get("HTTP_MYHEADER")) # xxyyxx， 不推荐使用
     print(request.headers.get("myheader")) # xxyyxx
     return HttpResponse("ok")
+
+# 上传文件
+def getFile(request):
+    # 获取上传文件，可以接收多个文件
+    print(request.FILES) # 只能接受POST 请求上传的文件，其他请求不可以
+    # <MultiValueDict: {'file': [<InMemoryUploadedFile: aa.txt (text/plain)>]}>
+
+
+    print(request.FILES.get("file")) # aa.txt
+    file = request.FILES.get("file")
+    print(file, type(file)) # aa.txt <class 'django.core.files.uploadedfile.InMemoryUploadedFile'>
+
+    files = request.FILES.getlist("file")
+    print(files) # [<InMemoryUploadedFile: aa.txt (text/plain)>, <InMemoryUploadedFile: init.sh (application/x-sh)>]
+
+    for file in request.FILES.getlist("file"):
+        with open(f'./{file.name}', 'wb') as f: # 当前路径
+            f.write(file.read()) # 写入文件操作
+    return HttpResponse("ok")
