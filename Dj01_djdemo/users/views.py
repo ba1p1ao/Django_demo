@@ -24,7 +24,8 @@ def getAllarges(request):
     print(request.GET.get("username")) # admin
     print(request.GET.get("password")) # 123
     print(request.GET["password"]) # 123
-
+    print(request.GET.get("size", "0")) # 如果没有size 参数，返回 0 字符串
+    print(request.GET.getlist("size", ["0"])) # 如果没有size 参数，返回 ["0"]
 
     ## 如果有多个相同的参数请求
     ## http://localhost:8001/users/info/?username=admin&password=123&love=youxi&love=xuexi&love=yundong
@@ -33,9 +34,41 @@ def getAllarges(request):
     print(request.GET.get("password")) # 123
     print(request.GET.get("love")) # 会覆盖love的值 # yundong
     print(request.GET.getlist("love")) # 不会覆盖love的值，会返回列表的形式 # ['youxi', 'xuexi', 'yundong']
-    
-    ## POST 请求 直接调用 POST，
-    print(request.POST) # 显示的请求体内容
 
 
+    return HttpResponse("ok")
+
+
+# 获取请求体
+def getRequestBody(request):
+
+    # 在各种http请求方法中，POST/PUT/PATCH都是可以设置请求体的。
+    # request.POST 中获取客户端通过POST发送过来的请求体，无法获取PUT/PATCH的请求体。
+    # 请求体内容
+    """ POST 请求 (只接受表单格式的数据，不接受json格式的数据)
+        curl --location 'localhost:8001/users/body/?password=123' \
+        --form 'name="lihua"' \
+        --form 'love="youxi"' \
+        --form 'love="yundong"'
+    """
+    print(request.POST) # 显示的请求体内容 # <QueryDict: {'asdf': ['asdf']}>
+    print(request.POST.get("name")) # lihua
+    print(request.POST.getlist("love")) # ['youxi', 'yundong']
+    print(request.GET) # 也可以接受get的请求参数 # <QueryDict: {'password': ['123']}>
+
+
+    """ PUT / PATCH 请求 (不接受form表单的形式发送数据, 只接受json格式的数据)
+        curl --location --request PUT 'localhost:8001/users/body/?password=123' \
+        --header 'Content-Type: application/json' \
+        --data '{
+            "name": "lihua",
+            "love": ["youxi", "yundong"]
+        }'
+    """
+    # 使用 request.body 获取请求体数据 可以接受 POST / PUT / PATCH
+    print(request.body)  # 字节数据 # b'{\n    "name": "lihua",\n    "love": ["youxi", "yundong"]\n\n}'
+    # #接受客户端发送的json格式
+    import json
+    data = json.loads(request.body)
+    print(data) # {'name': 'lihua', 'love': ['youxi', 'yundong']}
     return HttpResponse("ok")

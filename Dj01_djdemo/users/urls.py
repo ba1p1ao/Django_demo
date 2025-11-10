@@ -5,4 +5,5 @@ urlpatterns = [
     path("index/", views.index),
     path("users/", views.users),
     path("info/", views.getAllarges),
+    path("body/", views.getRequestBody),
 ]
