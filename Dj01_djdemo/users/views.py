@@ -164,7 +164,8 @@ def getResponseJSON(request):
     # return HttpResponse(content=json_data, content_type="text/json")
 
     from django.http.response import JsonResponse
-    data = {"username": "admin", "password": "password"},
+
+    data = ({"username": "admin", "password": "password"},)
     data = [
         {"username": "admin", "password": "password"},
         {"username": "ubuntu", "password": "password"},
@@ -172,4 +173,32 @@ def getResponseJSON(request):
 
     # JsonResponse 内部实现了 json_data = json.dumps(data)
     # JsonResponse 并不直接支持列表转换成 json 格式，需要关闭安全监测，把 safe 参数的值设置为 False.
-    return JsonResponse(data, safe=False) 
+    return JsonResponse(data, safe=False)
+
+
+def getResponseFile(request):
+    # 返回图片格式
+    # with open("./status/a.png", 'rb') as f:
+    #     img = f.read()
+
+    # # print(img)
+    # return HttpResponse(img, content_type='image/png')
+
+    # 返回 压缩包
+    with open("./status/源代码.zip", "rb") as f:
+        file = f.read()
+
+    return HttpResponse(file, content_type="application/x-zip")
+
+
+def setHeaders(request):
+    # 返回数据的过程中设置响应头
+
+    response = HttpResponse("ok")
+    from datetime import datetime
+
+    # 自定义响应头的值和属性都不能是多字节
+    response["date"] = datetime.now()
+
+    return response
+

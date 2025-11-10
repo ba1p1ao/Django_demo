@@ -10,6 +10,6 @@ urlpatterns = [
     path("file/", views.getFile),
     path("reshtml/", views.getResponseHTML),
     path("resjson/", views.getResponseJSON),
-    path("file/", views.getFile),
-
+    path("resfile/", views.getResponseFile),
+    path("setheader/", views.setHeaders)
 ]
