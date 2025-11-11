@@ -38,5 +38,8 @@ urlpatterns = [
     # namespace 是include 里面的，不是path里面的参数
     # 填写 namespace 方便于 reverse 做站内跳转
     path("users/", include("users.urls", namespace="users")),
+
+    # 添加 mycookie应用 路由
+    path("cookie/", include("mycookie.urls", namespace="cookie")),
     
 ]
