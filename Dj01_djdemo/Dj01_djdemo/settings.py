@@ -12,19 +12,35 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 
+# 项目中一般我们会使用大写的变量来表示一个常量，所谓常量就是在开发中，用于表示一些固定数据的标记符，
+# 这种标记符，在其他语言中是基本语法来的，但是在python中并没有常量，
+# 所以，就有了一些开发者声明一些大写的变量用于充当常量，常量一经定义，不能赋值。
+# 因此，我们作为开发人员，就要遵守这种约定，以后如果希望项目中的一些数据不要被人修改，则可以声明成常量。
+# django中的配置被强制要求一定要大写！！！否则django不识别
+
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent # 项目根路径
+# BASE_DIR代表了项目一个参考根路径，是当前文件的父级的父级目录路径，主要作用是提供给整个django项目进行路径拼接的。
+BASE_DIR = Path(__file__).resolve().parent.parent  # 项目根路径
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-+he2o_-f)-t*q^mt+yh4=9^e$6^d%0dwi*(g!#8(5%ok)jpnac'
+# 秘钥，      用于提供给加密算法的秘钥
+# 加密：      哈希串/序列串 = 加密算法(原始密码, 秘钥)
+# 验证：      新哈希串 = 加密算法(原始密码, 秘钥)， 新哈希串==哈希串，则表示原始密码正确
+SECRET_KEY = "django-insecure-+he2o_-f)-t*q^mt+yh4=9^e$6^d%0dwi*(g!#8(5%ok)jpnac"
 
 # SECURITY WARNING: don't run with debug turned on in production!
+# 在线下开发，DEBUG = True，django会基于测试服务器提供静态资源（图片，css，js）的访问，当服务端出错，会显示详尽错误信息
+# 在线上运营，DEBUG = False，django不会基于测试服务器提供静态资源访问，当服务端出错，不会显示任何关于系统的错误信息，仅仅提供错误页面
 DEBUG = True
 
+
+# 设置当前django项目允许客户端通过哪些地址访问到django项目，"*"表示服务端的任意地址
+# ALLOWED_HOSTS = ["*"]
 ALLOWED_HOSTS = [
     "127.0.0.1",
     "192.168.10.101",
@@ -34,54 +50,66 @@ ALLOWED_HOSTS = [
 
 
 # Application definition
-
+# django注册的子应用列表[用于数据库操作，缓存，日志，admin管理]
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
+    "django.contrib.admin",              # admin站点的子应用
+    "django.contrib.auth",               # django内置的登录认证功能
+    "django.contrib.contenttypes",       # 内容类型管理
+    "django.contrib.sessions",           # session功能
+    "django.contrib.messages",           # 信号、消息功能的实现
+    "django.contrib.staticfiles",        # 静态文件浏览服务
+
+
+    # 子应用的字符串导包路径，基于项目 BASE_DIR 下的子应用
 ]
+
+
+# 中间件、全局钩子、拦截器
+# 中间件，MIDDLEWARE，就是一个django提供给开发者用于在http请求和响应过程中，进行数据拦截的插件系统/钩子系统
+# 用于进行拦截请求，或者数据格式转换，权限判断
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    # 'django.middleware.csrf.CsrfViewMiddleware', # 
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    # 'django.middleware.csrf.CsrfViewMiddleware', #
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = 'Dj01_djdemo.urls'
+# django项目的默认总路由模块
+ROOT_URLCONF = "Dj01_djdemo.urls"
 
+# html模板引擎配置
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'Dj01_djdemo.wsgi.application'
+# web应用程序的模块
+WSGI_APPLICATION = "Dj01_djdemo.wsgi.application"
 
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+# 数据库配置，可以配置多个数据库
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
 }
 
@@ -89,18 +117,19 @@ DATABASES = {
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 
+# 密码验证类
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
 
@@ -108,24 +137,28 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
-
-TIME_ZONE = 'UTC'
-
+# 语言
+LANGUAGE_CODE = "zh-hans"
+# 时区
+TIME_ZONE = "Asia/Shanghai"
+# 是否开启国际化本地化功能
 USE_I18N = True
-
+# 是否启用时区转换
+# USE_TZ的值为False则django会基于TIME_ZONE的时区来转换时间，否则USE_TZ的值为True，则采用基于操作系统时间来转换时间  
 USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = 'static/'
+# 静态文件的访问url路径
+STATIC_URL = "static/"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+# 默认情况下，django中的数据表的主键ID的数据类型 bigint
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
 ##  from django.conf.global_settings import SESSION_ENGINE, SESSION_FILE_PATH
@@ -135,5 +168,3 @@ SESSION_ENGINE = "django.contrib.sessions.backends.file"
 
 # session 文件存储目录
 SESSION_FILE_PATH = BASE_DIR / "status"
-
-
