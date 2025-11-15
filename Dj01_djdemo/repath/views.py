@@ -32,3 +32,8 @@ def get_like(request: HttpRequest, like):
 def get_uuid(request: HttpRequest, uuid):
     
     return HttpResponse(f"repath uuid = {uuid}")
+
+
+def get_moble(request: HttpRequest, moble):
+
+    return HttpResponse(f"repath moble = {moble}")
