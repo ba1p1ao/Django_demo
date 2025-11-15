@@ -13,7 +13,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent # 项目根路径
 
 
 # Quick-start development settings - unsuitable for production
@@ -126,3 +126,14 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+##  from django.conf.global_settings import SESSION_ENGINE, SESSION_FILE_PATH
+# SESSION_ENGINE 默认是数据库存储
+# 修改 session 为文件存储引擎
+SESSION_ENGINE = "django.contrib.sessions.backends.file"
+
+# session 文件存储目录
+SESSION_FILE_PATH = BASE_DIR / "status"
+
+
