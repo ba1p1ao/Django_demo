@@ -205,3 +205,8 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+
+# 去掉 status 里面的 session 文件
+status/
+session.*
