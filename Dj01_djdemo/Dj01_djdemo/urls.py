@@ -41,5 +41,6 @@ urlpatterns = [
 
     # 添加 mycookie应用 路由
     path("cookie/", include("mycookie.urls", namespace="cookie")),
-    path("session/", include("mysession.urls", namespace="session"))
+    path("session/", include("mysession.urls", namespace="session")),
+    path("repath/", include("repath.urls", namespace="repath")),
 ]
