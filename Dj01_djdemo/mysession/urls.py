@@ -8,5 +8,8 @@ urlpatterns = [
     path("get/", views.get_session),
     path("set/", views.set_session),
     path("del/", views.del_session),
+    path("login/", views.login),
+    path("login_handle/", views.login_handle),
+    path("info/", views.info),
 
 ]

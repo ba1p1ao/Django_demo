@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.http import HttpResponse, HttpRequest
 
 # Create your views here.
@@ -46,3 +46,50 @@ def del_session(request: HttpRequest):
     request.session.clear()
 
     return HttpResponse("del_session") 
+
+
+
+from django.views.decorators.http import require_http_methods
+
+
+
+@require_http_methods(["GET"])
+def login(request: HttpRequest):
+    """显示登录表单"""
+    content = """
+    <form action="/session/login_handle/" method="POST">
+        登录账号：<input type="text" name="username"><br>
+        登录密码：<input type="password" name="password"><br>
+        <button>登录</button>
+    </form>
+    """
+    return HttpResponse(content)
+
+
+@require_http_methods(["POST"])
+def login_handle(request: HttpRequest):
+    username = request.POST.get("username")
+    password = request.POST.get("password")
+    # 这里可以对password进行加密
+    if username == 'admin' and password == "admin":
+        request.session["username"] = username
+        request.session["is_login"] = True
+        request.session.set_expiry(10)
+        return redirect("/session/info/")
+    
+
+@require_http_methods(["GET"])
+def info(request: HttpRequest):
+    is_login = request.session.get("is_login")
+    if is_login:
+        username = request.session.get("username")
+        return HttpResponse(f"hello {username}")
+    else:
+        return redirect("/session/login/")
+
+
+
+
+
+
+
