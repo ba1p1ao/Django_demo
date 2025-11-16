@@ -208,5 +208,4 @@ __marimo__/
 
 
 # 去掉 status 里面的 session 文件
-status/
-session.*
+sess*
