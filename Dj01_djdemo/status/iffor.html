@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Title</title>
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 1000px;
+        }
+
+        tr, td {
+            border: 1px solid red;
+            padding: 8px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+{% if name == 'root' %}
+    <h1>欢迎管理员</h1>
+{% else %}
+    <h1>欢迎会员</h1>
+{% endif %}
+
+<table>
+    <tr>
+        <td>序号</td>
+        <td>id</td>
+        <td>name</td>
+        <td>price</td>
+    </tr>
+    {% for bl in book_list1 %}
+        {% if not forloop.counter|divisibleby:"2" %}
+            <tr style="background-color: skyblue">
+        {% else %}
+            <tr>
+        {% endif %}
+            <td>{{ forloop.counter }}</td>
+            <td>{{ bl.id }}</td>
+            <td>{{ bl.name }}</td>
+            <td>{{ bl.price }}</td>
+        </tr>
+    {% endfor %}
+</table>
+</body>
+</html>
