@@ -85,7 +85,7 @@ ROOT_URLCONF = "Dj01_djdemo.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / "status"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [

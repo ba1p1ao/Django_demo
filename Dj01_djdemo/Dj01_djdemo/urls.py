@@ -43,4 +43,6 @@ urlpatterns = [
     path("cookie/", include("mycookie.urls", namespace="cookie")),
     path("session/", include("mysession.urls", namespace="session")),
     path("repath/", include("repath.urls", namespace="repath")),
+
+    path("template/", include("mytemplate.urls", namespace="template")),
 ]
