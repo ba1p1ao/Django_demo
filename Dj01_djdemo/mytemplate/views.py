@@ -102,3 +102,20 @@ def myfilter(request: HttpRequest):
         {"name": "zhaoyun", "sex": 1, "zichan": 112.00},
     ]
     return render(request, "myfilter.html", locals())
+
+
+def tem_fenli(request: HttpRequest):
+    """模板分离技术"""
+    return render(request, "tem_fenli.html", locals())
+
+
+def tem_jicheng_users(request: HttpRequest):
+    """模板继承技术"""
+    return render(request, "tem_jicheng_users.html", locals())
+
+def tem_jicheng_goods(request: HttpRequest):
+    """模板继承技术"""
+    return render(request, "tem_jicheng_goods.html", locals())
+
+def tem_jicheng_info(request: HttpRequest):
+    return render(request, "tem_jicheng_info.html", locals())
