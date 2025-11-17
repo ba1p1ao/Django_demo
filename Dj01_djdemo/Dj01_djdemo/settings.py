@@ -61,6 +61,7 @@ INSTALLED_APPS = [
 
 
     # 子应用的字符串导包路径，基于项目 BASE_DIR 下的子应用
+    "mytemplate", # 注册方便使用自定义过滤器
 ]
 
 

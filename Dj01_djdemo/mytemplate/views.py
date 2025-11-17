@@ -92,4 +92,13 @@ def myfilter(request: HttpRequest):
     time1 = datetime.now()
     file_size = 2342512
     address = ["中国", "北京", "海淀"]
+    mobile = "13412341234"
+
+    users = [
+        {"name": "lihua", "sex": 0, "zichan": 122.08},
+        {"name": "liubei", "sex": 1, "zichan": 1432.30},
+        {"name": "guanyu", "sex": 1, "zichan": 142.38},
+        {"name": "zhangfei", "sex": 1, "zichan": 132.30},
+        {"name": "zhaoyun", "sex": 1, "zichan": 112.00},
+    ]
     return render(request, "myfilter.html", locals())

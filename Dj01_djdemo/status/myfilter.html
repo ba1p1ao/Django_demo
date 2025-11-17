@@ -1,3 +1,4 @@
+{% load my_filter %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -24,5 +25,14 @@
 
 <p>随机提取 in list = {{ address | random }}</p>
 <p>按字符长度截取内容 = {{ content | truncatechars:"10" | safe }}</p>
+
+<p>手机号： {{ mobile }}</p>
+<p>手机号： {{ mobile | mobile_filter }}</p>
+<p>手机号： {{ mobile | mobile_filter:"XXX" }}</p>
+
+{% for user in users %}
+<p>姓名: {{ user.name }}, 性别: {{ user.sex | sex_filter }}, 资产: {{ user.zichan | toFixed:"1" }}</p>
+{% endfor %}
+
 </body>
 </html>
