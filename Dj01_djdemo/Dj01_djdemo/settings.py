@@ -86,7 +86,7 @@ ROOT_URLCONF = "Dj01_djdemo.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "status"],
+        "DIRS": [BASE_DIR / "myfiles"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -168,4 +168,4 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 SESSION_ENGINE = "django.contrib.sessions.backends.file"
 
 # session 文件存储目录
-SESSION_FILE_PATH = BASE_DIR / "status"
+SESSION_FILE_PATH = BASE_DIR / "myfiles"

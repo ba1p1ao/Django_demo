@@ -178,14 +178,14 @@ def getResponseJSON(request):
 
 def getResponseFile(request):
     # 返回图片格式
-    # with open("./status/a.png", 'rb') as f:
+    # with open("./myfiles/a.png", 'rb') as f:
     #     img = f.read()
 
     # # print(img)
     # return HttpResponse(img, content_type='image/png')
 
     # 返回 压缩包
-    with open("./status/源代码.zip", "rb") as f:
+    with open("./myfiles/源代码.zip", "rb") as f:
         file = f.read()
 
     return HttpResponse(file, content_type="application/x-zip")
@@ -210,7 +210,7 @@ from django.http.response import HttpResponsePermanentRedirect # 301 永久重�
 
 def zhanWaiRedirect(request):
 
-    # response = HttpResponse("ok", status=302)
+    # response = HttpResponse("ok", myfiles=302)
     # response["Location"] = "https://www.baidu.com"
     # return response
 

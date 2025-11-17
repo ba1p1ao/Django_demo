@@ -78,7 +78,7 @@ def login_handle(request):
     else:
         response = HttpResponseRedirect("/cookie/login/")
         response["method"] = "GET"
-        response.set_cookie("status", "fail")
+        response.set_cookie("myfiles", "fail")
 
     return response
 
