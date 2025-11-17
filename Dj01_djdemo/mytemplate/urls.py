@@ -7,4 +7,5 @@ urlpatterns = [
     path("index/", views.index),
     path("template/", views.get_template),
     path("iffor/", views.iffor),
+    path("myfilter/", views.myfilter),
 ]

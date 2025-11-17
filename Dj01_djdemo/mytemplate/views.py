@@ -1,7 +1,8 @@
 from django.shortcuts import render  # render 用于渲染template模版页面
 from django.http import HttpRequest, HttpResponse
-
-
+from django.conf import settings
+import time
+from datetime import datetime
 # Create your views here.
 
 
@@ -40,8 +41,7 @@ def index(request: HttpRequest):
 
 
 def get_template(request: HttpRequest):
-    from django.conf import settings
-    import time
+
 
     num1 = 100
     num2 = 3.14
@@ -83,3 +83,13 @@ def iffor(request: HttpRequest):
     ]
 
     return render(request, "iffor.html", locals())
+
+
+def myfilter(request: HttpRequest):
+    """过滤器"""
+    title = "我的标题"
+    content = '我的个人主页：<a href="http://www.baidu.com">点击查看</a>'
+    time1 = datetime.now()
+    file_size = 2342512
+    address = ["中国", "北京", "海淀"]
+    return render(request, "myfilter.html", locals())

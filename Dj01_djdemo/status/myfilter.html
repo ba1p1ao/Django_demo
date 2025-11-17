@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<p>{{ content }}</p>
+
+{# 无参数过滤器 #}
+<p>{{ content | safe }}</p>
+{# safe 过滤器的作用是告诉django，当前输出内容中的HTML内容属于可信任的安全内容，不要对内容中的html代码进行实体转义#}
+
+{# 有参数过滤器 #}
+<p>title = {{ title | default:"无标题" }}</p> {# default 过滤器的作用是当变量不存在时，使用当前默认值实现 #}
+
+<p>time = {{ time1 }}</p>
+<p>time = {{ time1 | date:"Y年m月d日 h时i分s秒" }}</p>
+
+<p>文件大小 = {{ file_size | filesizeformat }}</p>
+
+<p>address list = {{ address }}</p>
+<p>地址 = {{ address | join:"-" }}</p>
+
+<p>随机提取 in list = {{ address | random }}</p>
+<p>按字符长度截取内容 = {{ content | truncatechars:"10" | safe }}</p>
+</body>
+</html>
