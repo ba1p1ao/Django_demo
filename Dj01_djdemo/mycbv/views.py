@@ -24,6 +24,7 @@ from django.http import HttpResponse, HttpRequest
 # 用户列表视图
 class UserListView(View):
     def get(self, request: HttpRequest):
+        print("-------------- 3. 视图已经执行 ---------------")
         print(request.GET)
         return HttpResponse(f"Get user list data={request.GET}")
 

@@ -77,6 +77,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # "Dj01_djdemo.my_middleware.simple_middleware", # 注册自定义函数中间件
+    "Dj01_djdemo.my_middleware.SimpleMiddleware", # 注册自定义函数中间件
 ]
 
 # django项目的默认总路由模块

@@ -85,6 +85,7 @@ def iffor(request: HttpRequest):
     return render(request, "iffor.html", locals())
 
 
+from django.template.response import TemplateResponse
 def myfilter(request: HttpRequest):
     """过滤器"""
     title = "我的标题"
@@ -101,7 +102,8 @@ def myfilter(request: HttpRequest):
         {"name": "zhangfei", "sex": 1, "zichan": 132.30},
         {"name": "zhaoyun", "sex": 1, "zichan": 112.00},
     ]
-    return render(request, "myfilter.html", locals())
+
+    return TemplateResponse(request, "myfilter.html", locals())
 
 
 def tem_fenli(request: HttpRequest):
