@@ -118,7 +118,7 @@ DATABASES = {
         "ENGINE": "django.db.backends.mysql", # ORM的底层对接pymysql的核心引擎类
         "NAME": "django_orm_school",
         "HOST": "127.0.0.1",
-        "PORT": 3307,
+        "PORT": 3306,
         "USER": "root",
         "PASSWORD": "123",
         'POOL_OPTIONS': {  # pool表示数据库连接池配置，主要为了节省连接数据库的开销，临时存储数据库连接对象
