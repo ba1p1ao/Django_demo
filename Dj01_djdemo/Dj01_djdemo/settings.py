@@ -78,7 +78,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # "Dj01_djdemo.my_middleware.simple_middleware", # 注册自定义函数中间件
-    "Dj01_djdemo.my_middleware.SimpleMiddleware", # 注册自定义函数中间件
+    # "Dj01_djdemo.my_middleware.SimpleMiddleware", # 注册自定义函数中间件
 ]
 
 # django项目的默认总路由模块
@@ -110,10 +110,23 @@ WSGI_APPLICATION = "Dj01_djdemo.wsgi.application"
 
 # 数据库配置，可以配置多个数据库
 DATABASES = {
+    # "default": {
+    #     "ENGINE": "django.db.backends.sqlite3",
+    #     "NAME": BASE_DIR / "db.sqlite3",
+    # },
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
+        "ENGINE": "django.db.backends.mysql", # ORM的底层对接pymysql的核心引擎类
+        "NAME": "django_orm_school",
+        "HOST": "127.0.0.1",
+        "PORT": 3307,
+        "USER": "root",
+        "PASSWORD": "123",
+        'POOL_OPTIONS': {  # pool表示数据库连接池配置，主要为了节省连接数据库的开销，临时存储数据库连接对象
+            'POOL_SIZE': 10,  # 默认情况下，打开的数据库连接对象的数量 [1,2,3,4,5,6,7,8,9,10]
+            'MAX_OVERFLOW': 30,  # 负载情况下，允许溢出的连接数量  [11,12,13,14,15,16,17,18,19,20]
+        }
+    },
+
 }
 
 
