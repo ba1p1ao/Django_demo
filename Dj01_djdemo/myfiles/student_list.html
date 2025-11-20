@@ -1,0 +1,147 @@
+{% load my_filter %}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学生信息表</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem 1rem;
+            color: #333;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding: 1rem;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+            font-size: 2rem;
+        }
+
+        .header p {
+            color: #7f8c8d;
+            font-size: 1rem;
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: #3498db;
+        }
+
+        th {
+            padding: 1rem 1.2rem;
+            text-align: left;
+            color: white;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid #ecf0f1;
+            transition: background-color 0.2s;
+        }
+
+        tbody tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        tbody tr:hover {
+            background-color: #e8f4fc;
+        }
+
+        td {
+            padding: 0.9rem 1.2rem;
+            color: #2c3e50;
+        }
+
+        .footer {
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .table-container {
+                overflow-x: auto;
+            }
+
+            table {
+                min-width: 600px;
+            }
+
+            th, td {
+                padding: 0.7rem 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-user-graduate"></i> 学生信息表</h1>
+            <p>年龄大于20岁的学生列表</p>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        {% for head in table_header %}
+                            <th>{{ head }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in students %}
+                    <tr>
+                        {% for head in table_header %}
+                            <td>{{ student | get_item:head }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="footer">
+            <p>共 {{ students|length }} 条记录 | 更新时间: {% now "Y-m-d H:i" %}</p>
+        </div>
+    </div>
+</body>
+</html>

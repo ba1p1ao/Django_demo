@@ -18,3 +18,7 @@ def sex_filter(value):
 def toFixed(value, n: int=2):
     """保留 n 位小数"""
     return f"{value:.{n}f}"
+
+@register.filter(name="get_item")
+def get_item(value, key):
+    return value.get(key, "")
