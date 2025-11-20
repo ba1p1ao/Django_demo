@@ -26,11 +26,17 @@ class Student(BaseModel):
         (1, "未入学"),
         (2, "已毕业"),
     )
-    id = models.IntegerField(primary_key=True, verbose_name="id")
+
+    SEX = (
+        (True, "男"),
+        (False, "女"),
+    )
+
+    id = models.AutoField(primary_key=True, verbose_name="id")
     name = models.CharField(max_length=255, db_index=True, unique=True, verbose_name="姓名")
     classmate = models.CharField(max_length=50, db_column="class", db_index=True, default="", verbose_name="班级编号")
     age = models.IntegerField(verbose_name="年龄")
-    sex = models.BooleanField(default=True, verbose_name="性别")
+    sex = models.BooleanField(default=True, choices=SEX, verbose_name="性别")
     mobile = models.CharField(max_length=50, db_index=True, unique=True, verbose_name="手机号")
     status = models.IntegerField(default=0, choices=STATUS, verbose_name="毕业状态")
     description = models.TextField(blank=True, null=True, verbose_name="个性签名")
@@ -41,4 +47,4 @@ class Student(BaseModel):
         verbose_name_plural = verbose_name
 
     def __str__(self):
-        return self.name
+        return f"{self.name}"
