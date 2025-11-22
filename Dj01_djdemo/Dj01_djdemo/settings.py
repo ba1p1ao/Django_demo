@@ -163,7 +163,7 @@ TIME_ZONE = "Asia/Shanghai"
 USE_I18N = True
 # 是否启用时区转换
 # USE_TZ的值为False则django会基于TIME_ZONE的时区来转换时间，否则USE_TZ的值为True，则采用基于操作系统时间来转换时间  
-USE_TZ = True
+USE_TZ = False
 
 
 # Static files (CSS, JavaScript, Images)
