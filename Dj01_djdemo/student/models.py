@@ -33,7 +33,7 @@ class Student(BaseModel):
     )
 
     id = models.AutoField(primary_key=True, verbose_name="id")
-    name = models.CharField(max_length=255, db_index=True, unique=True, verbose_name="姓名")
+    name = models.CharField(max_length=255, db_index=True, verbose_name="姓名")
     classmate = models.CharField(max_length=50, db_column="class", db_index=True, default="", verbose_name="班级编号")
     age = models.IntegerField(verbose_name="年龄")
     sex = models.BooleanField(default=True, choices=SEX, verbose_name="性别")
