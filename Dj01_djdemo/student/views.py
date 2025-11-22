@@ -107,3 +107,36 @@ class StudentView(View):
 
         return JsonResponse(data, status=200, safe=False)
 
+    def put(self, request: HttpRequest):
+        """put 更新数据"""
+        data = orjson.loads(request.body)
+        print(data)
+
+        # # 使用 save 更新数据
+        # student = models.Student.objects.filter(name=data['name']).first()
+        # if student:
+        #     student.age = data['age']
+        # student.save()
+        # print(student.__dict__)
+
+        # 使用 update 更新数据
+        student = models.Student.objects.filter(name=data.get("name")).update(**data)
+        print(student)
+
+        return JsonResponse({}, status=200)
+
+    def delete(self, request: HttpRequest):
+        data = orjson.loads(request.body)
+        # # 使用 delete() 删除
+        # student = (models.Student.objects.filter(id=data.get("id")))
+        # print(student)
+        # if student:
+        #     student.delete()
+        # print(student)
+
+        # 也可直接使用object.filter().delete()
+
+        student = models.Student.objects.filter(name=data.get("name")).delete()
+        print(student) # 返回值为 # (1, {'student.Student': 1})
+
+        return JsonResponse({}, status=200)
