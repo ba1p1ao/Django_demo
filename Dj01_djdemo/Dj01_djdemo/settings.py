@@ -128,7 +128,18 @@ DATABASES = {
             'MAX_OVERFLOW': 30,  # 负载情况下，允许溢出的连接数量  [11,12,13,14,15,16,17,18,19,20]
         }
     },
-
+    "djdemo": {
+        "ENGINE": "django.db.backends.mysql",
+        "NAME": "django_orm_student",
+        "HOST": "127.0.0.1",
+        "PORT": 3306,
+        "USER": "root",
+        "PASSWORD": "123",
+        'POOL_OPTIONS': {  # pool表示数据库连接池配置，主要为了节省连接数据库的开销，临时存储数据库连接对象
+            'POOL_SIZE': 10,  # 默认情况下，打开的数据库连接对象的数量 [1,2,3,4,5,6,7,8,9,10]
+            'MAX_OVERFLOW': 30,  # 负载情况下，允许溢出的连接数量  [11,12,13,14,15,16,17,18,19,20]
+        }
+    }
 }
 
 

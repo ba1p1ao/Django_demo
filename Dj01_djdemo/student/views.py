@@ -432,18 +432,33 @@ class StudentSearchView(View):
 
 
         """ORM使用原生SQL语句查询"""
-        sql = "select * from student"
+        # sql = "select * from student"
+        #
+        # students = models.Student.objects.raw(sql)
+        #
+        # print(students)
 
-        students = models.Student.objects.raw(sql)
+        """
+         多库共存
+        1. 先到`Dj01_djdemo/settings.py`里面，在DATABASES配置项中新增一个数据库
+        2. 为了方便快速演示，所以我们直接把school里面的student复制到student数据库
+        """
 
-        print(students)
+        # # 使用多库共存，将 school 的数据复制到 student
+        # # 使用 using 选择 setting 里面的数据库
+        # students = models.Student.objects.using("default").values()
+        # for student in students:
+        #     models.Student.objects.using("djdemo").create(**student)
 
+        # # 查询 djdemo 的数据
+        # students = models.Student.objects.using("djdemo").all()
+        # # 修改 djdemo 的数据
+        # for student in students:
+        #     student.age = 25
+        #     student.save()
 
-
-
-
-
-
+        # # 查询 djdemo 的数据
+        # students = models.Student.objects.using("default").values("id", "name", "age")
 
         # return JsonResponse({}, safe=False)
         return JsonResponse({"data": queryset2dict(students)}, status=200)
