@@ -444,6 +444,15 @@ class StudentSearchView(View):
         2. 为了方便快速演示，所以我们直接把school里面的student复制到student数据库
         """
 
+        # # 多库共存下，基于django底层安装的pymysql来使用原生SQL语句操作的切换数据连接，完成数据库查询的过程
+        # from django.db import connections
+        # with connections["djdemo"].cursor() as cursor:
+        #     # 让游标执行SQL语句
+        #     cursor.execute("select * from student")
+        #     # 通过游标获取查询结果
+        #     result = cursor.fetchall()
+        #     print(result)
+
         # # 使用多库共存，将 school 的数据复制到 student
         # # 使用 using 选择 setting 里面的数据库
         # students = models.Student.objects.using("default").values()
