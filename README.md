@@ -8,5 +8,5 @@ python 3.10.19
 pip install django==4.2.5
 pip install orjson
 pip instlla pymysql
-
+pip install cryptography
 ```
