@@ -292,11 +292,13 @@ class StudentSearchView(View):
         """
         # F对象
         # F对象，主要用于在SQL语句中针对字段之间的值进行比较的查询。
-        # 之前的查询都是对象的属性与常量值比较，两个属性怎么比较呢？ 答：使用F对象，被定义在django.db.models中。
+        # 之前的查询都是对象的属性与常量值比较，两个属性怎么比较呢？ 
+        # 答：使用F对象，被定义在django.db.models中。
         """
 
         # # 查询出入学以后，数据没有被修改过的学生信息
-        # students = models.Student.objects.filter(created_time=F("created_time"))
+        # # SQL: select * from student where created_time = updated_time
+        # students = models.Student.objects.filter(created_time=F("updated_time"))
 
         """
          Q对象
@@ -322,8 +324,69 @@ class StudentSearchView(View):
         #     Q(classmate=301, sex=True, age__gt=21) | Q(classmate=302, age__lt=19, sex=False)
         # )
 
-        # Q对象可以使用& 表示逻辑与（and），| 表示逻辑或（or），~表示逻辑非（not）
-        # 年龄不等于19的, 可以将 exclude, 用 ~Q 替换
-        students = models.Student.objects.filter(~Q(age=19))
+        # # Q对象可以使用& 表示逻辑与（and），| 表示逻辑或（or），~表示逻辑非（not）
+        # # 年龄不等于19的, 可以将 exclude, 用 ~Q 替换
+        # students = models.Student.objects.filter(~Q(age=19))
 
+        # # 查询301班年龄不等于20的女生
+        # students = models.Student.objects.filter(Q(classmate=301, sex=False) & ~Q(age=20))
+
+        # # 查询 302 班，年龄大于20，没有毕业的学生
+        # students = models.Student.objects.filter(~Q(status=2) & Q(classmate=302, age__gt=20))
+
+        """
+        使用 order_by 排序
+        # 如果没有声明order_by()来查询，而值又是一样的时候，则根据MySQL在内部执行查询计划的顺序进行排列，也就是随机排列
+        """
+        # 字段排序写法：
+        # 单字段升序 order_by("字段名”)
+        # 单字段降序 order_by("-字段名”)
+        # 多字段升序 order_by("字段名”，"字段名”) # 优先级从左往在
+
+
+        # # order_by("id")   # 表示按id字段的值进行升序排序，id数值从小到大
+        # # order_by("-id")  # 表示按id字段的值进行降序排序，id数值从大到小
+        # students = models.Student.objects.order_by("id").values("classmate", "id", "name")
+
+
+        # # 先按班级进行第一排序降序处理，当班级数值一样时，再按id进行第二排序升序处理
+        # # student = Student.objects.order_by("-classmate","id").values("classmate","id","name")
+        #
+        # students = models.Student.objects.order_by("-classmate", "id").values("classmate", "id", "name")
+
+        # # 查询出301，302，303班的学生并排序，按班级排序再按id排序后再按age排序
+        # students = (models.Student.objects.filter(classmate__in=[301, 302, 303])
+        #             .order_by("classmate", "id", "age")
+        #             .values("id", "name", "classmate", "age"))
+
+        """
+        惰性执行
+        QuerySet查询集在创建时是不会访问数据库执行SQL语句，
+        直到模型对象被调用输出或者调用模型对象的属性时，
+        才会真正的访问数据库执行SQL语句，
+        调用模型的情况包括循环迭代、序列化、与if合用，print的时候。
+        """
+        # students = models.Student.objects.all()
+        #
+        # # 缓存结果 经过存储后，可以重用查询集，第二次使用缓存中的数据。
+        # for student in students:
+        #     print(student.id, student.name)
+        #
+        # # 第一次调用了数据库，第二次则不会调用数据库
+        # for student in students:
+        #     print(student.id, student.name)
+        #
+
+
+        """下标操作"""
+        # students = models.Student.objects.all().values("id", "name")[0] # 获取下标为0的1条数据，实际上就是LIMIT1
+        # students = models.Student.objects.all().values("id", "name")[2] # 获取下标为2的1条数据，实际上就是 LIMIT 1 OFFSET 2
+
+        """切片操作"""
+        # students = models.Student.objects.all().values("id", "name")[0:3] # 获取下标从0开始的3条数据，实际上是 LIMIT 3
+        # students = models.Student.objects.all().values("id", "name")[3:6] # 获取下标从3开始的3条数据，实际上是 LIMIT 3 OFFSET 3
+        students = models.Student.objects.all()
+        # """不管使用下标还是切片，QuerySet都不会立即执行，直到调用查询结果时才真正的连接数据库执行。"""
+
+        # return JsonResponse({}, safe=False)
         return JsonResponse({"data": queryset2dict(students)}, status=200)
