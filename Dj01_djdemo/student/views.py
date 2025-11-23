@@ -2,6 +2,7 @@ from django.shortcuts import render
 from django.views import View
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.db.models import Q, F, QuerySet
+from django.db.models.query import RawQuerySet
 from django.db.models import Model
 from django.forms.models import model_to_dict
 from student import models
@@ -154,7 +155,7 @@ def queryset2dict(data, fields=None, exclude=None):
         exclude: 指定要排除的字段列表
     """
     result = {}
-    if isinstance(data, QuerySet):
+    if isinstance(data, QuerySet) or isinstance(data, RawQuerySet):
         result_list = []
         for item in data:
             if isinstance(item, Model):
@@ -428,6 +429,21 @@ class StudentSearchView(View):
         # students = models.Student.objects.values("classmate").annotate(Avg("age")).filter(
         #     classmate__in=[301, 302, 303, 304, 305], age__avg__gt=20
         # )
+
+
+        """ORM使用原生SQL语句查询"""
+        sql = "select * from student"
+
+        students = models.Student.objects.raw(sql)
+
+        print(students)
+
+
+
+
+
+
+
 
         # return JsonResponse({}, safe=False)
         return JsonResponse({"data": queryset2dict(students)}, status=200)
