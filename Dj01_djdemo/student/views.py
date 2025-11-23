@@ -343,11 +343,9 @@ class StudentSearchView(View):
         # 单字段降序 order_by("-字段名”)
         # 多字段升序 order_by("字段名”，"字段名”) # 优先级从左往在
 
-
         # # order_by("id")   # 表示按id字段的值进行升序排序，id数值从小到大
         # # order_by("-id")  # 表示按id字段的值进行降序排序，id数值从大到小
         # students = models.Student.objects.order_by("id").values("classmate", "id", "name")
-
 
         # # 先按班级进行第一排序降序处理，当班级数值一样时，再按id进行第二排序升序处理
         # # student = Student.objects.order_by("-classmate","id").values("classmate","id","name")
@@ -377,7 +375,6 @@ class StudentSearchView(View):
         #     print(student.id, student.name)
         #
 
-
         """下标操作"""
         # students = models.Student.objects.all().values("id", "name")[0] # 获取下标为0的1条数据，实际上就是LIMIT1
         # students = models.Student.objects.all().values("id", "name")[2] # 获取下标为2的1条数据，实际上就是 LIMIT 1 OFFSET 2
@@ -385,8 +382,52 @@ class StudentSearchView(View):
         """切片操作"""
         # students = models.Student.objects.all().values("id", "name")[0:3] # 获取下标从0开始的3条数据，实际上是 LIMIT 3
         # students = models.Student.objects.all().values("id", "name")[3:6] # 获取下标从3开始的3条数据，实际上是 LIMIT 3 OFFSET 3
-        students = models.Student.objects.all()
+        # students = models.Student.objects.all()
         # """不管使用下标还是切片，QuerySet都不会立即执行，直到调用查询结果时才真正的连接数据库执行。"""
+
+        """聚合函数"""
+        from django.db.models import Sum, Avg, Max, Min, Count
+        # students = models.Student.objects.filter(classmate="301").aggregate(Sum("age"), Avg("age"), Max("age"), Min("age"))
+        # # "result": {
+        # #     "age__sum": 148,
+        # #     "age__avg": 21.1429,
+        # #     "age__max": 23,
+        # #     "age__min": 19
+        # # }
+
+        # students_count = models.Student.objects.filter(classmate="302").count() # count() 的内部实现，也是基于聚合函数的, 同下
+        # print(students_count) # 3
+        # students = models.Student.objects.filter(classmate="302").aggregate(Count("id"))
+        # # "result": {
+        # #     "id__count": 3
+        # # }
+        # print(students) # {'id__count': 3}
+
+        # # 查新301班入学最早的学生[也就是ID最小的]
+        # students = models.Student.objects.filter(classmate=301).aggregate(c=Min("id"))
+        # print(students)  # {'id__min': 2}  ==> {'c': 2}
+
+        """分组查询"""
+        # # 例如，查询每一个班级的学生平均年龄
+        # students = models.Student.objects.values("classmate").annotate(age_avg=Avg("age"))
+
+        # # 在分组前过滤, filter 相当于 where
+        # # SQL：
+        #     # SELECT `student`.`class`, AVG(`student`.`age`) AS `age__avg`
+        #     # FROM `student` WHERE `student`.`class` IN ('301', '302', '303')
+        #     # GROUP BY `student`.`class` ORDER BY NULL
+        # students = models.Student.objects.filter(classmate__in=[301, 302, 303]).values("classmate").annotate(Avg("age"))
+
+        # # 在 分组后过滤， filter 相当于 having
+        # # 例如，查询301，302，303，304，305，306的学生平均年龄大于20的班级
+        # # SQL:
+        # #  SELECT `student`.`class`, AVG(`student`.`age`) AS `age__avg`
+        # #  FROM `student` WHERE `student`.`class` IN ('301', '302', '303', '304', '305')
+        # #  GROUP BY `student`.`class`
+        # #  HAVING AVG(`student`.`age`) > 20.0e0 ORDER BY NULL
+        # students = models.Student.objects.values("classmate").annotate(Avg("age")).filter(
+        #     classmate__in=[301, 302, 303, 304, 305], age__avg__gt=20
+        # )
 
         # return JsonResponse({}, safe=False)
         return JsonResponse({"data": queryset2dict(students)}, status=200)
