@@ -21,6 +21,8 @@ set global general_log = 'ON';
 tail -f /var/lib/mysql/ff969a281c3a.log
 
 """
+
+
 # Create your views here.
 class StudentView(View):
     """1：1模型关联"""
@@ -101,7 +103,12 @@ class StudentView(View):
     #     return HttpResponse("post ok")
 
 
+"""一对多"""
+
+
 class ArticleView(View):
+    """一对多"""
+
     def post(self, request: HttpRequest):
         """添加主模型，再添加外键模型"""
         # auther = models.Auther.objects.create(name="小明", age=23, sex=True)
@@ -157,9 +164,7 @@ class ArticleView(View):
         # if auther:
         #     print(auther) # <QuerySet [<Auther: {'name': '小明', 'age': 23, 'sex': True}>]>
 
-
         return HttpResponse("ok")
-
 
     def put(self, request: HttpRequest):
         """更新数据 (save)"""
@@ -218,9 +223,7 @@ class ArticleView(View):
         # auther = models.Article.objects.filter(title="标题4").update(auther=models.Auther.objects.filter(name="小红").first())
         # print(auther)
 
-
         return HttpResponse("put ok")
-
 
     def delete(self, request: HttpRequest):
         """删除数据"""
@@ -239,6 +242,120 @@ class ArticleView(View):
         SET AUTOCOMMIT = 1
         """
         obj = models.Auther.objects.filter(name="小红").first().delete()
-        print(obj) # (1, {'myorm.Auther': 1})
+        print(obj)  # (1, {'myorm.Auther': 1})
+
+        return HttpResponse("delete ok")
+
+
+"""多对多"""
+
+
+class TeacherView(View):
+    def post(self, request: HttpRequest):
+        """添加数据"""
+        # # 先添加实体模型，再通过外键add绑定两个模型的关系
+        # # 先创建 teacher
+        # teacher = models.Teacher.objects.create(name="大明", age=30, sex=True)
+        # # 创建course
+        # course = models.Course.objects.create(name="python基础")
+        # # 使用 add 关联 两个实体
+        # teacher.course.add(course)
+
+        # # 添加多个 course
+        # # 先获取 teacher
+        # teacher = models.Teacher.objects.filter(name="大明").first()
+        # # 添加 course
+        # courses = [
+        #     models.Course.objects.create(name="python框架"),
+        #     models.Course.objects.create(name="python项目实战"),
+        #     models.Course.objects.create(name="python爬虫"),
+        # ]
+        # # 将多个 courses add 关联起来
+        # teacher.course.add(*courses) # teacher.course.add(course1, course2, course3)
+
+        return HttpResponse("post ok")
+
+    def get(self, request: HttpRequest):
+        """查询数据"""
+        """先查其中一个模型，接着通过外键，查询另一个模型的数据"""
+        # # 例如， 查询大明的授课列表
+        # # 通过 teacher 作为条件， 查询 course
+        # courses = models.Course.objects.filter(teacher__name="大明")
+        # print(courses)
+
+        # # 例如， 查询大明的授课列表
+        # # 通过查询 teacher ，之后调用teacher.course.all()
+        # teacher = models.Teacher.objects.filter(name="大明").first()
+        # print(teacher)
+        # print(teacher.course.all())
+
+        # # 查询 哪些老师在教 python基础课
+        # # 先查询 python基础，在通过外键查询老师
+        # # SQL:
+        # # SELECT `orm_course`.`id`, `orm_course`.`name`
+        # # FROM `orm_course`
+        # # WHERE `orm_course`.`name` = 'python基础'
+        # # ORDER BY `orm_course`.`id` ASC LIMIT 1
+        # course = models.Course.objects.filter(name="python基础").first()
+        #
+        # # SQL: SELECT `orm_teacher`.`id`, `orm_teacher`.`name`, `orm_teacher`.`age`, `orm_teacher`.`sex`
+        # # FROM `orm_teacher` INNER JOIN `orm_course_teacher` ON (`orm_teacher`.`id` = `orm_course_teacher`.`teacher_id`)
+        # # WHERE `orm_course_teacher`.`course_id` = 1 LIMIT 21
+        # print(course.teacher.all())
+
+        # # 查询 哪些老师在教 python基础课
+        # # SQL:
+        # # select * from orm_teacher
+        # # left join orm_course_teacher on orm_teacher.id = orm_course_teacher.teacher_id
+        # # left join orm_course on orm_course_teacher.course_id = orm_course.id
+        # # where orm_course.name = "python基础";
+        # teacher = models.Teacher.objects.filter(course__name="python基础")
+        # print(teacher)
+
+        # 查询的时候推荐使用一条语句直接查询，使用外键作为条件判断，
+        # 因为在 sql 语句中，直接使用外键作为条件查询会调用 join，join 的性能会更好
+        # 如果先查询课程信息，再通过课程调用外键，这样会执行两条 sql 语句，
+        # 在表结构很大的情况下，使用多个 join 的性能会优于多条 select
+
+        return HttpResponse("get ok")
+
+
+    def put(self, request: HttpRequest):
+        """更新数据"""
+        from django.db.models import F, Q, Value
+        from django.db.models.functions import Concat
+        # # 把大明的所有授课课程的名字后面加上 (大明专讲)
+        # courses = models.Course.objects.filter(teacher__name="大明").update(
+        # # 如果不使用 Concat ，直接采用 F("name) + "(大明专讲)", 数据库的字符串拼接用的就是 concat
+        # # 数据库会将 F("name) 的值转成 double 类型，导致报错
+        #     name=Concat(F('name'), Value("(大明专讲)"))
+        # )
+        # print(courses)
+
+        # # 把大明的所有授课课程的名字后面加上 (大明专讲) (实训循环的方式)
+        # courses = models.Course.objects.filter(teacher__name="大明")
+        # for course in courses:
+        #     course.name = course.name + "(大明专讲)"
+        #     course.save()
+
+
+        return HttpResponse("put ok")
+
+
+    def delete(self, request: HttpRequest):
+        """删除数据"""
+
+        # # 删除一个模型的数据，会自动删除关系表中对应的数据
+        # # 例如：删除大明老师，关系表也会对应删除
+        # obj = models.Teacher.objects.filter(name="大明").delete()
+        # print(obj) # (5, {'myorm.Course_teacher': 4, 'myorm.Teacher': 1})
+
+        # # 删除一个模型的数据，对应关系的一条，采用 remove 解绑的方式
+        # # 例如：大红老师不教，java基础和java框架
+        # teacher = models.Teacher.objects.filter(name="大红").first()
+        # courses = models.Course.objects.filter(name__in=["java基础", "java框架"])
+        # for course in courses:
+        #     teacher.course.remove(course)
+
 
         return HttpResponse("delete ok")
