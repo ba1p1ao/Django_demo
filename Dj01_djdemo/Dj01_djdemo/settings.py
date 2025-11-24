@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     "mytemplate", # 注册方便使用自定义过滤器
     # 添加model
     "student",
+    "myorm", 
 ]
 
 

@@ -46,4 +46,5 @@ urlpatterns = [
     path("template/", include("mytemplate.urls", namespace="template")),
     path("cbv/", include("mycbv.urls", namespace="cbv")),
     path("student/", include("student.urls", namespace="student")),
+    path("orm/", include("myorm.urls", namespace="orm")),
 ]
