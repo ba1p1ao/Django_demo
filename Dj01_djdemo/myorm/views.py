@@ -1,9 +1,26 @@
+from wsgiref.util import application_uri
+
 from django.shortcuts import render
 from django.views import View
 from django.http import HttpResponse, HttpRequest
 from myorm import models
 
+"""
+开启数据库查询日志
 
+show variables like "%general_log%";
+
++------------------+---------------------------------+
+| Variable_name    | Value                           |
++------------------+---------------------------------+
+| general_log      | OFF                             |
+| general_log_file | /var/lib/mysql/ff969a281c3a.log |
++------------------+---------------------------------+
+
+set global general_log = 'ON'; 
+tail -f /var/lib/mysql/ff969a281c3a.log
+
+"""
 # Create your views here.
 class StudentView(View):
     """1：1模型关联"""
@@ -39,7 +56,6 @@ class StudentView(View):
     #
     #     return HttpResponse("hello")
 
-
     # def getSearch(self, request: HttpRequest):
     #     """查询数据"""
     #     # # 从主模型 (主表，orm_student) 查询到外键模型 (附加表，orm_student_profile)
@@ -71,16 +87,158 @@ class StudentView(View):
     #
     #     return HttpResponse("ok")
 
-    def get(self, request: HttpRequest):
-        """删除操作"""
-        # # on delete=models.CASCADE 表示删除主模型数据时，对应的外键模型数据也会被删除
-        # student = models.Student.objects.filter(id=1).delete()
-        # print(student) # (2, {'myorm.StudentProfile': 1, 'myorm.Student': 1})
+    # def get(self, request: HttpRequest):
+    #     """删除操作"""
+    #     # # on delete=models.CASCADE 表示删除主模型数据时，对应的外键模型数据也会被删除
+    #     # student = models.Student.objects.filter(id=1).delete()
+    #     # print(student) # (2, {'myorm.StudentProfile': 1, 'myorm.Student': 1})
+    #
+    #     # # on delete=models.CASCADE 删除外键型数据时， 不会影响主键模型的数据
+    #     # student = models.StudentProfile.objects.filter(student__name="小红").delete()
+    #     # print(student) # (1, {'myorm.StudentProfile': 1})
+    #
+    #
+    #     return HttpResponse("post ok")
 
-        # # on delete=models.CASCADE 删除外键型数据时， 不会影响主键模型的数据
-        # student = models.StudentProfile.objects.filter(student__name="小红").delete()
-        # print(student) # (1, {'myorm.StudentProfile': 1})
+
+class ArticleView(View):
+    def post(self, request: HttpRequest):
+        """添加主模型，再添加外键模型"""
+        # auther = models.Auther.objects.create(name="小明", age=23, sex=True)
+        # article_list = [
+        #     models.Article(title="标题1", content="内容1", pubdate="2025-10-01 10:10:10", auther=auther),
+        #     models.Article(title="标题2", content="内容2", pubdate="2025-10-02 10:10:10", auther=auther),
+        # ]
+        # models.Article.objects.bulk_create(article_list)
+
+        """先获取主模型，再添加外键模型"""
+        # auther = models.Auther.objects.filter(name="小明").first()
+        # if auther:
+        #     article_list = [
+        #         models.Article(title="标题3", content="内容3", pubdate="2025-10-03 10:10:10", auther=auther),
+        #         models.Article(title="标题4", content="内容4", pubdate="2025-10-04 10:10:10", auther=auther),
+        #     ]
+        #     models.Article.objects.bulk_create(article_list)
+
+        """添加数据方式二"""
+        # obj = models.Article.objects.create(
+        #     auther=models.Auther.objects.create(name="小红", age=21, sex=False),
+        #     title="标题5",
+        #     content="内容5",
+        #     pubdate="2025-10-15 10:10:17"
+        # )
+
+        return HttpResponse("get ok")
+
+    def get(self, request: HttpRequest):
+        """查询数据"""
+        # # 通过主模型， 查询外键模型
+        # auther = models.Auther.objects.filter(name="小明").first()
+        # if auther:
+        #     # 获取外键 article 就是 Article.auther 中的 related_name，
+        #     # 提供给 Auther 用于反向查询使用
+        #     print(auther.article)  # myorm.Article.None，是因为没有调用all，所以不会执行数据库操作
+        #     print(auther.article.all())  # 可以获取article数据
+
+        """使用主模型作为条件，直接查询外键模型的数据"""
+        # articles = models.Article.objects.filter(auther__name="小明").all()
+        # print(articles)
+
+        """通过外键模型查询主模型"""
+        # # 例如，查询文章标题为《标题5》的作者
+        # articles = models.Article.objects.filter(title="标题5")
+        # if articles:
+        #     print(articles) # <QuerySet [<Article: {'title': '标题5', 'content': '内容5', 'pubdate': datetime.datetime(2025, 10, 15, 10, 10, 17)}>]>
+        #     print(articles[0].auther) # {'name': '小红', 'age': 21, 'sex': False}
+
+        """使用外键模型作为条件，直接查询主模型的据"""
+        # #例如，查询文章标题为《标题3》的作者
+        # auther = models.Auther.objects.filter(article__title="标题3")
+        # if auther:
+        #     print(auther) # <QuerySet [<Auther: {'name': '小明', 'age': 23, 'sex': True}>]>
 
 
         return HttpResponse("ok")
 
+
+    def put(self, request: HttpRequest):
+        """更新数据 (save)"""
+        # # 先获取主模型， 再改动外键模型数据， 如果外键模型有多个，需要循环修改
+        # # 例如： 修改小明的文章发布日期为：2025-01-10 10:00:00
+        # auther = models.Auther.objects.filter(name="小明").first()
+        # if auther:
+        #     for article in auther.article.all():
+        #         print(article)
+        #         article.pubdate = "2025-01-10 10:00:00"
+        #         article.save()
+
+        """获取到外键模型，再改动主模型"""
+        # # 例如，修改文章标题《标题3》的作者为小红
+        # auther = models.Auther.objects.filter(name="小红").first()
+        # print(auther)
+        # articles = models.Article.objects.filter(title="标题3")
+        # print(articles)
+        # if articles:
+        #     for article in articles:
+        #         article.auther = auther
+        #         article.save
+
+        # # 例如，修改文章标题《标题4》的作者的年龄为27岁
+        # article = models.Article.objects.filter(title="标题4").first()
+        # print(article)
+        # article.auther.age = 27
+        # article.auther.save()
+
+        """更新数据 (update)"""
+        # # 例如： 修改小明的标题1,标题2发布日期为：2025-02-10 10:00:00
+        # # SQL:
+        # # """
+        # # SELECT `orm_article`.`id` FROM `orm_article`
+        # # INNER JOIN `orm_auther` ON (`orm_article`.`auther_id` = `orm_auther`.`id`)
+        # # WHERE (`orm_auther`.`name` = '小明' AND `orm_article`.`title` IN ('标题1', '标题2'));
+        # # UPDATE `orm_article` SET `pubdate` = '2025-02-10 10:00:00' WHERE `orm_article`.`id` IN (1, 2)
+        # # """
+        #
+        # article = models.Article.objects.filter(auther__name="小明", title__in=["标题1", "标题2"]).update(pubdate="2025-02-10 10:00:00")
+        # print(article)
+
+        # # 例如，修改文章标题《标题4》的作者的年龄为30岁
+        # # SQL:
+        # # """
+        # # SELECT `orm_auther`.`id` FROM `orm_auther`
+        # # INNER JOIN `orm_article` ON (`orm_auther`.`id` = `orm_article`.`auther_id`)
+        # # WHERE `orm_article`.`title` = '标题4';
+        # # UPDATE `orm_auther` SET `age` = 30 WHERE `orm_auther`.`id` IN (1)
+        # # """
+        #
+        # auther = models.Auther.objects.filter(article__title="标题4").update(age=30)
+        # print(auther)
+
+        # # 例如，修改文章标题《标题4》的作者为小红
+        # auther = models.Article.objects.filter(title="标题4").update(auther=models.Auther.objects.filter(name="小红").first())
+        # print(auther)
+
+
+        return HttpResponse("put ok")
+
+
+    def delete(self, request: HttpRequest):
+        """删除数据"""
+        # on_delete = models.DO_NOTHING 不能实现，可以删除外键约束的主键
+        # 当前模型的关联属性为 SET_NULL 所以，删除主模型并不会影响外键模型数据
+
+        """
+        对应的 sql 语句
+        SELECT `orm_auther`.`id`, `orm_auther`.`name`, `orm_auther`.`age`, `orm_auther`.`sex` FROM `orm_auther` 
+        WHERE `orm_auther`.`name` = '小红' 
+        ORDER BY `orm_auther`.`id` ASC LIMIT 1
+        SET AUTOCOMMIT = 0
+        UPDATE `orm_article` SET `auther_id` = NULL WHERE `orm_article`.`auther_id` IN (2)
+        DELETE FROM `orm_auther` WHERE `orm_auther`.`id` IN (2)
+        COMMIT
+        SET AUTOCOMMIT = 1
+        """
+        obj = models.Auther.objects.filter(name="小红").first().delete()
+        print(obj) # (1, {'myorm.Auther': 1})
+
+        return HttpResponse("delete ok")

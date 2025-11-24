@@ -4,4 +4,5 @@ from myorm.views import *
 app_name = "orm"
 urlpatterns = [
     path("student/", StudentView.as_view()),
+    path("article/", ArticleView.as_view())
 ]
