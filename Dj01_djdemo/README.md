@@ -131,3 +131,21 @@ urlpatterns = [
 - 想要请求goods的index视图函数，就要访问http://localhost:8000/goods/goods
 
 
+
+6. 开启数据库查询日志
+
+```sql
+show variables like "%general_log%";
+
++------------------+---------------------------------+
+| Variable_name    | Value                           |
++------------------+---------------------------------+
+| general_log      | OFF                             |
+| general_log_file | /var/lib/mysql/ff969a281c3a.log |
++------------------+---------------------------------+
+
+set global general_log = 'ON';
+```
+```bash
+tail -f /var/lib/mysql/ff969a281c3a.log
+```
