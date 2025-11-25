@@ -69,7 +69,8 @@ class Article(models.Model):
     # DO_NOTHING 不能实现，删除外键关联的主键
     # 需要添加 on_delete=models.SET_NULL, null=True 才能实现删除主键，外键的值这是为空
     # auther = models.ForeignKey(to="Auther", on_delete=models.DO_NOTHING, related_name="article", verbose_name="作者")
-    auther = models.ForeignKey(to="Auther", on_delete=models.SET_NULL, null=True, related_name="article", verbose_name="作者")
+    auther = models.ForeignKey(to="Auther", on_delete=models.SET_NULL, null=True, related_name="article",
+                               verbose_name="作者")
     title = models.CharField(max_length=50, verbose_name="文章标题")
     content = models.TextField(null=True, verbose_name="文章内容")
     pubdate = models.DateTimeField(null=True, verbose_name="发布时间")
@@ -83,7 +84,6 @@ class Article(models.Model):
 
     def __str__(self):
         return str({"title": self.title, "content": self.content, "pubdate": self.pubdate})
-
 
 
 """
@@ -114,6 +114,7 @@ class Teacher(models.Model):
 class Course(models.Model):
     name = models.CharField(max_length=50, verbose_name="课程名")
     teacher = models.ManyToManyField("Teacher", related_name="course", verbose_name="教师信息")
+
     # django 会自动创建一个关系表 orm_course_teacher
     class Meta:
         db_table = 'orm_course'
@@ -122,3 +123,47 @@ class Course(models.Model):
 
     def __str__(self):
         return str({"name": self.name})
+
+
+"""
+自关联
+"""
+
+
+class Area(models.Model):
+    """一对多的自关联"""
+    name = models.CharField(max_length=50, verbose_name="地区名")
+    # 注意：to：不能写 Area， 因为在 parent 生成的时候 Area 还没有实例化成功，只能使用 self
+    parent = models.ForeignKey("self", on_delete=models.SET_NULL, related_name="son", null=True, blank=True)
+
+    class Meta:
+        db_table = "orm_area"
+        verbose_name = db_table
+        verbose_name_plural = verbose_name
+
+    def __str__(self):
+        return str({"id": self.id, "name": self.name})
+
+
+class People(models.Model):
+    """多对多的自关联"""
+    name = models.CharField(max_length=50, verbose_name="人名")
+    age = models.SmallIntegerField(default=0, verbose_name="年龄")
+    # 因为自关联的多对多，很容易形成递归查找，所以默认情况下，django提供的多对多自关联是不支持反向查询。
+    # 但是我们可以通过 symmetrical=True 设置django支持反向查询，但是会损耗性能。
+
+    # symmetrical=True 默认值，表示双向关系，绑定的关系是双向，一般用于好友关系
+    # 这种情况下，django不提供反向查询
+    # 生成的表 orm_people_friends 字段为 (id, from_people_id, to_people_id)
+    friends = models.ManyToManyField("self", symmetrical=True)
+
+    # symmetrical=False 表示单向关系，绑定的关系是单向，一般用于单向关注，黑名单
+
+
+    class Meta:
+        db_table = "orm_people"
+        verbose_name = db_table
+        verbose_name_plural = verbose_name
+
+    def __str__(self):
+        return str({"id": self.id, "name": self.name})

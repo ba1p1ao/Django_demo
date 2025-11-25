@@ -319,7 +319,6 @@ class TeacherView(View):
 
         return HttpResponse("get ok")
 
-
     def put(self, request: HttpRequest):
         """更新数据"""
         from django.db.models import F, Q, Value
@@ -338,9 +337,7 @@ class TeacherView(View):
         #     course.name = course.name + "(大明专讲)"
         #     course.save()
 
-
         return HttpResponse("put ok")
-
 
     def delete(self, request: HttpRequest):
         """删除数据"""
@@ -357,5 +354,221 @@ class TeacherView(View):
         # for course in courses:
         #     teacher.course.remove(course)
 
-
         return HttpResponse("delete ok")
+
+
+"""
+自关联
+"""
+
+
+class AreaView(View):
+    def get(self, request: HttpRequest):
+        """查询数据"""
+
+        # 获取 全部区域，并打印省-市-区
+        # provinces = models.Area.objects.filter(parent_id=None)
+        # print(provinces)
+        # citys = models.Area.objects.filter(parent__name__in=[province.name for province in provinces])
+        # print(citys)
+        # qus = models.Area.objects.filter(parent__parent__name__in=[province.name for province in provinces])
+        # print(qus)
+
+        # provinces = models.Area.objects.filter(parent_id=None)
+        # for province in provinces:
+        #     # print(province.name, end='-')
+        #     for city in province.son.all():
+        #         if city.son.all():
+        #             for qu in city.son.all():
+        #                 print(f"{province.name}-{city.name}-{qu.name}")
+        #         else:
+        #             print(f"{province.name}-{city.name}")
+
+        # # 性能优化
+        # from django.db.models import Prefetch
+        # # 使用 prefetch_related 减少数据库查询
+        # provinces = models.Area.objects.filter(parent_id=None).prefetch_related(
+        #     Prefetch('son', queryset=models.Area.objects.prefetch_related('son'))
+        # )
+        #
+        # for province in provinces:
+        #     for city in province.son.all():
+        #         if city.son.exists():
+        #             for district in city.son.all():
+        #                 print(f"{province.name}-{city.name}-{district.name}")
+        #         else:
+        #             print(f"{province.name}-{city.name}")
+
+        """通过子级记录查找父级记录，得到唯一的父级"""
+        # area = models.Area.objects.filter(name="二七区").first()
+        # print(area.parent)  # {'id': 3, 'name': '郑州市'}
+        # print(area.parent.parent)  # {'id': 1, 'name': '河南省'}
+
+        """通过父级记录查找子级记录，得到多个子级"""
+        # province = models.Area.objects.filter(name="河南省").first()
+        # citys = province.son.all()
+        # print(citys)  # <QuerySet [<Area: {'id': 3, 'name': '郑州市'}>, <Area: {'id': 4, 'name': '开封市'}>]>
+        # for city in citys:
+        #     print(city.name, city.son.all())
+
+        """使用子级记录作为查询条件，查询数据"""
+        # # 查询 二七区 是哪个省份的，因为是区级，所以 son__son__name="二七区"
+        # area = models.Area.objects.filter(son__son__name="二七区")
+        # print(area)  # <QuerySet [<Area: {'id': 1, 'name': '河南省'}>]>
+
+        # # 查询 深圳市 是哪个省份的，因为是市级，所以 son__name="深圳市"
+        # area = models.Area.objects.filter(son__name="深圳市")
+        # print(area)  # <QuerySet [<Area: {'id': 10, 'name': '广东省'}>]>
+
+        """使用父级记录作为查询条件，查询数据"""
+        # # 查询哪些市级的省份是 河南省
+        # area = models.Area.objects.filter(parent__name="河南省")
+        # print(area)  # <QuerySet [<Area: {'id': 3, 'name': '郑州市'}>, <Area: {'id': 4, 'name': '开封市'}>]>
+
+        # # 查询 河南省 有哪些区域
+        # area = models.Area.objects.filter(parent__parent__name="河南省")
+        # print(area)  # <QuerySet [<Area: {'id': 7, 'name': '二七区'}>, <Area: {'id': 8, 'name': '新郑区'}>, <Area: {'id': 9, 'name': '郑东新区'}>]>
+        #
+
+        # from django.db import connections
+        # with connections["default"].cursor() as cursor:
+        #     # 让游标执行SQL语句
+        #     cursor.execute("""
+        #                    select t1.name as 省, t2.name as 市, t3.name as 区
+        #                    from orm_area t1
+        #                             left join orm_area t2 on t2.parent_id = t1.id
+        #                             left join orm_area t3 on t3.parent_id = t2.id
+        #                    where t1.parent_id is null
+        #                    """)
+        #     # 通过游标获取查询结果
+        #     result = cursor.fetchall()
+        #     # print(result)
+        #     for r in result:
+        #         print(r)
+
+        return HttpResponse("area get ok")
+
+    def post(self, request: HttpRequest):
+        """添加数据"""
+        # # # 添加省份数据，因为没有上级辖区，所以不需要声明其他字段
+        # area1 = models.Area.objects.create(name="河南省")
+        # area2 = models.Area.objects.create(name="河北省")
+        # # 添加城市
+        # area1.son.add(
+        #     models.Area.objects.create(name="郑州市"),
+        #     models.Area.objects.create(name="开封市"),
+        # )
+        #
+        # models.Area.objects.create(name="石家庄", parent=area2)
+        # models.Area.objects.create(name="邯郸市", parent_id=area2.id)
+        #
+        # # 添加地区数据
+        # area5 = models.Area.objects.get(name="郑州市")
+        # area5.son.add(*[
+        #     models.Area.objects.create(name="二七区"),
+        #     models.Area.objects.create(name="新郑区"),
+        #     models.Area.objects.create(name="郑东新区"),
+        # ])
+
+        # mysql> select * from orm_area;
+        # +----+--------------+-----------+
+        # | id | name         | parent_id |
+        # +----+--------------+-----------+
+        # |  1 | 河南省       |      NULL |
+        # |  2 | 河北省       |      NULL |
+        # |  3 | 郑州市       |         1 |
+        # |  4 | 开封市       |         1 |
+        # |  5 | 石家庄       |         2 |
+        # |  6 | 邯郸市       |         2 |
+        # |  7 | 二七区       |         3 |
+        # |  8 | 新郑区       |         3 |
+        # |  9 | 郑东新区     |         3 |
+        # +----+--------------+-----------+
+
+        # province = models.Area.objects.create(name="广东省")
+        # area_list = [
+        #     models.Area(name="佛山市"),
+        #     models.Area(name="广州市"),
+        #     models.Area(name="珠海市"),
+        #     models.Area(name="深圳市"),
+        # ]
+        # # bulk属性只有在一对多的时候存在，多对多是没有。
+        # # bulk允许列表中出现没有保存到数据库中的模型对象，django会自动创建到数据库中
+        # province.son.add(*area_list, bulk=False)
+
+        # mysql> select * from orm_area;
+        # +----+--------------+-----------+
+        # | id | name         | parent_id |
+        # +----+--------------+-----------+
+        # |  1 | 河南省       |      NULL |
+        # |  2 | 河北省       |      NULL |
+        # |  3 | 郑州市       |         1 |
+        # |  4 | 开封市       |         1 |
+        # |  5 | 石家庄       |         2 |
+        # |  6 | 邯郸市       |         2 |
+        # |  7 | 二七区       |         3 |
+        # |  8 | 新郑区       |         3 |
+        # |  9 | 郑东新区     |         3 |
+        # | 10 | 广东省       |      NULL |
+        # | 11 | 佛山市       |        10 |
+        # | 12 | 广州市       |        10 |
+        # | 13 | 珠海市       |        10 |
+        # | 14 | 深圳市       |        10 |
+        # +----+--------------+-----------+
+
+        return HttpResponse("area post ok")
+
+
+class PeopleView(View):
+    def get(self, request: HttpRequest):
+        """查询数据"""
+
+        # # 查询哪些人是小黑的朋友
+        # people = models.People.objects.filter(name="小黑").first()
+        # print(people.friends.all())
+
+        # peoples = models.People.objects.all()
+        # print(peoples)
+        # for people in peoples:
+        #     print(people)
+        #     print(people.friends.all())
+        return HttpResponse("get ok")
+
+    def post(self, request: HttpRequest):
+        """添加数据"""
+        # # 添加人的数据
+        # p1 = models.People.objects.create(name="小明")
+        # p2 = models.People.objects.create(name="小红")
+        # p3 = models.People.objects.create(name="小白")
+        # p4 = models.People.objects.create(name="小黑")
+        # p5 = models.People.objects.create(name="小兰")
+        #
+        # # 小红添加好友 (小明，小黑)
+        # p_hong = models.People.objects.get(name="小红")
+        # p_ming = models.People.objects.get(name="小明")
+        # p_hei = models.People.objects.get(name="小黑")
+        # p_hong.friends.add(p_ming, p_hei)
+        #
+        # # 小明添加好友
+        # p_ming = models.People.objects.get(name="小明")
+        # p_hei = models.People.objects.get(name="小黑")
+        # p_bai = models.People.objects.get(name="小白")
+        # p_hone = models.People.objects.get(name="小红")
+        # p_ming.friends.add(p_hei, p_bai, p_hone)
+        #
+        # # 小兰添加好友
+        # p_lan = models.People.objects.get(name="小兰")
+        # p_hei = models.People.objects.get(name="小黑")
+        # p_bai = models.People.objects.get(name="小白")
+        # p_hone = models.People.objects.get(name="小红")
+        # p_ming = models.People.objects.get(name="小明")
+        # p_lan.friends.add(p_hei, p_bai, p_hone, p_ming)
+        #
+        # # 小白添加好友
+        # p_bai = models.People.objects.get(name="小白")
+        # p_hei = models.People.objects.get(name="小黑")
+        # p_ming = models.People.objects.get(name="小明")
+        # p_hone = models.People.objects.get(name="小红")
+        # p_bai.friends.add(p_hei, p_ming, p_hone)
+
+        return HttpResponse("people post ok")
