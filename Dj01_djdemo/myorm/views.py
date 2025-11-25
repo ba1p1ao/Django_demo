@@ -2,7 +2,7 @@ from wsgiref.util import application_uri
 
 from django.shortcuts import render
 from django.views import View
-from django.http import HttpResponse, HttpRequest
+from django.http import HttpResponse, HttpRequest, JsonResponse
 from myorm import models
 
 """
@@ -572,3 +572,233 @@ class PeopleView(View):
         # p_bai.friends.add(p_hei, p_ming, p_hone)
 
         return HttpResponse("people post ok")
+
+
+
+
+
+"""
+使用 select_related()  /  prefetch_related() 对查询进行优化
+
+        select_related() vs prefetch_related() 的区别
+核心区别
+特性	        select_related()	            prefetch_related()
+工作原理	    使用 SQL JOIN 语句	            使用分开的查询 + Python 内存关联
+查询次数	    1 次查询	                    2 次或更多查询
+适用关系	    ForeignKey, OneToOneField	    ManyToManyField, 反向 ForeignKey
+性能特点	    JOIN 可能复杂但单次	        多个简单查询
+内存使用	    可能返回冗余数据	            更高效的数据结构
+
+select_related() 适合：
+
+# 一对一关系
+Person.objects.select_related('profile')
+
+# 多对一关系（外键）
+Article.objects.select_related('author')
+
+# 链式关系
+Article.objects.select_related('author__profile')
+
+
+prefetch_related() 适合：
+
+# 多对多关系
+Person.objects.prefetch_related('groups')
+
+# 反向外键关系
+Author.objects.prefetch_related('article_set')
+
+# 复杂预取
+Person.objects.prefetch_related(
+    Prefetch('groups', queryset=Group.objects.filter(active=True))
+)
+
+"""
+
+
+class YouHuaSearchView(View):
+    def get(self, request: HttpRequest):
+        """[查询优化] select_related"""
+        """获取张三丰的居住地"""
+        # # 不使用 select_related
+        # person = models.Person.objects.filter(firstname="张", lastname="三丰").first()
+        # print(person.living.name) # 需要两条sql语句
+        # # """
+        # # SELECT `tb_person`.`id`, `tb_person`.`firstname`, `tb_person`.`lastname`, `tb_person`.`hometown_id`, `tb_person`.`living_id`
+        # # FROM `tb_person` WHERE (`tb_person`.`firstname` = '张' AND `tb_person`.`lastname` = '三丰') ORDER BY `tb_person`.`id` ASC LIMIT 1
+        # # SELECT `tb_city`.`id`, `tb_city`.`name`, `tb_city`.`province_id` FROM `tb_city` WHERE `tb_city`.`id` = 1 LIMIT 21
+        # # """
+
+        # # select_related 全外键关联优化
+        # person = models.Person.objects.filter(firstname="张", lastname="三丰").select_related().first()
+        # # """
+        # # SELECT `tb_person`.`id`, `tb_person`.`firstname`, `tb_person`.`lastname`, `tb_person`.`hometown_id`, `tb_person`.`living_id` FROM `tb_person` WHERE (`tb_person`.`firstname` = '张' AND `tb_person`.`lastname` = '三丰') ORDER BY `tb_person`.`id` ASC LIMIT 1
+        # # """
+
+        # # 限定外键的优化查找
+        # person = models.Person.objects.filter(firstname="张", lastname="三丰").select_related("living").first()
+        # print(person.living.name) # 只需要一条sql语句
+        # # """
+        # # SELECT `tb_person`.`id`, `tb_person`.`firstname`, `tb_person`.`lastname`, `tb_person`.`hometown_id`, `tb_person`.`living_id`, `tb_city`.`id`, `tb_city`.`name`, `tb_city`.`province_id`
+        # # FROM `tb_person`
+        # # LEFT OUTER JOIN `tb_city` ON (`tb_person`.`living_id` = `tb_city`.`id`)
+        # # WHERE (`tb_person`.`firstname` = '张' AND `tb_person`.`lastname` = '三丰')
+        # # ORDER BY `tb_person`.`id` ASC LIMIT 1
+        # # """
+
+        """获取张三丰的居住地和省份"""
+        # person = models.Person.objects.filter(firstname="张", lastname="三丰").select_related("living").select_related("living__province")
+        # # """
+        # # SELECT `tb_person`.`id`,
+        # #        `tb_person`.`firstname`,
+        # #        `tb_person`.`lastname`,
+        # #        `tb_person`.`hometown_id`,
+        # #        `tb_person`.`living_id`,
+        # #        `tb_city`.`id`,
+        # #        `tb_city`.`name`,
+        # #        `tb_city`.`province_id`,
+        # #        `tb_province`.`id`,
+        # #        `tb_province`.`name`
+        # # FROM `tb_person`
+        # #          LEFT OUTER JOIN `tb_city` ON (`tb_person`.`living_id` = `tb_city`.`id`)
+        # #          LEFT OUTER JOIN `tb_province` ON (`tb_city`.`province_id` = `tb_province`.`id`)
+        # # WHERE (`tb_person`.`firstname` = '张' AND `tb_person`.`lastname` = '三丰') LIMIT 21
+        # # """
+
+        # # 等同于上一段代码
+
+        # person = models.Person.objects.filter(firstname="张", lastname="三丰").select_related("living__province")
+        # # """
+        # # SELECT `tb_person`.`id`,
+        # #        `tb_person`.`firstname`,
+        # #        `tb_person`.`lastname`,
+        # #        `tb_person`.`hometown_id`,
+        # #        `tb_person`.`living_id`,
+        # #        `tb_city`.`id`,
+        # #        `tb_city`.`name`,
+        # #        `tb_city`.`province_id`,
+        # #        `tb_province`.`id`,
+        # #        `tb_province`.`name`
+        # # FROM `tb_person`
+        # #          LEFT OUTER JOIN `tb_city` ON (`tb_person`.`living_id` = `tb_city`.`id`)
+        # #          LEFT OUTER JOIN `tb_province` ON (`tb_city`.`province_id` = `tb_province`.`id`)
+        # # WHERE (`tb_person`.`firstname` = '张' AND `tb_person`.`lastname` = '三丰') LIMIT 21
+        # # """
+        # print(person[0].living.name, person[0].living.province.name)
+
+        """
+        [查询优化] prefetch_related
+        """
+
+        # # 查询所有人的足迹 (使用原来的方法)
+        # persons = models.Person.objects.all()
+        # for person in persons:
+        #     print(person.visitation.all())
+        # # 使用for循环，要执行sql查询语句这么多次
+        # # """
+        # # SELECT `tb_person`.`id`, `tb_person`.`firstname`, `tb_person`.`lastname`, `tb_person`.`hometown_id`, `tb_person`.`living_id` FROM `tb_person`
+        # # SELECT `tb_city`.`id`, `tb_city`.`name`, `tb_city`.`province_id` FROM `tb_city` INNER JOIN `tb_person_visitation` ON (`tb_city`.`id` = `tb_person_visitation`.`city_id`) WHERE `tb_person_visitation`.`person_id` = 1 LIMIT 21
+        # # SELECT `tb_city`.`id`, `tb_city`.`name`, `tb_city`.`province_id` FROM `tb_city` INNER JOIN `tb_person_visitation` ON (`tb_city`.`id` = `tb_person_visitation`.`city_id`) WHERE `tb_person_visitation`.`person_id` = 2 LIMIT 21
+        # # SELECT `tb_city`.`id`, `tb_city`.`name`, `tb_city`.`province_id` FROM `tb_city` INNER JOIN `tb_person_visitation` ON (`tb_city`.`id` = `tb_person_visitation`.`city_id`) WHERE `tb_person_visitation`.`person_id` = 3 LIMIT 21
+        # # SELECT `tb_city`.`id`, `tb_city`.`name`, `tb_city`.`province_id` FROM `tb_city` INNER JOIN `tb_person_visitation` ON (`tb_city`.`id` = `tb_person_visitation`.`city_id`) WHERE `tb_person_visitation`.`person_id` = 4 LIMIT 21
+        # # SELECT `tb_city`.`id`, `tb_city`.`name`, `tb_city`.`province_id` FROM `tb_city` INNER JOIN `tb_person_visitation` ON (`tb_city`.`id` = `tb_person_visitation`.`city_id`) WHERE `tb_person_visitation`.`person_id` = 5 LIMIT 21
+        # # """
+
+        # # 使用 prefetch_related 优化
+        #
+        # persons = models.Person.objects.all().prefetch_related("visitation")
+        # for person in persons:
+        #     print(person.visitation.all())
+        # # 同样是使用循环，只执行了两次sql语句查询
+        # # """
+        # # SELECT `tb_person`.`id`, `tb_person`.`firstname`, `tb_person`.`lastname`, `tb_person`.`hometown_id`, `tb_person`.`living_id` FROM `tb_person`
+        # # SELECT (`tb_person_visitation`.`person_id`) AS `_prefetch_related_val_person_id`, `tb_city`.`id`, `tb_city`.`name`, `tb_city`.`province_id` FROM `tb_city` INNER JOIN `tb_person_visitation` ON (`tb_city`.`id` = `tb_person_visitation`.`city_id`) WHERE `tb_person_visitation`.`person_id` IN (1, 2, 3, 4, 5)
+        # # """
+
+        # # prefetch_related 也支持多级外键的处理
+        # # 例如：查询所有人去过的省份
+        # persons = models.Person.objects.all().prefetch_related("visitation__province")
+        # for person in persons:
+        #     for vis in person.visitation.all():
+        #         print(person.firstname + person.lastname, vis.name, vis.province.name)
+        #
+        # # 只需要查询三次数据库即可
+        # # """
+        # # SELECT `tb_person`.`id`, `tb_person`.`firstname`, `tb_person`.`lastname`, `tb_person`.`hometown_id`, `tb_person`.`living_id` FROM `tb_person`
+        # # SELECT (`tb_person_visitation`.`person_id`) AS `_prefetch_related_val_person_id`, `tb_city`.`id`, `tb_city`.`name`, `tb_city`.`province_id` FROM `tb_city` INNER JOIN `tb_person_visitation` ON (`tb_city`.`id` = `tb_person_visitation`.`city_id`) WHERE `tb_person_visitation`.`person_id` IN (1, 2, 3, 4, 5)
+        # # SELECT `tb_province`.`id`, `tb_province`.`name` FROM `tb_province` WHERE `tb_province`.`id` IN (1, 2)
+        # # """
+
+        """以下情况不推荐使用，必须使用 prefetch_related 优化"""
+        # persons = models.Person.objects.all()
+        # for person in persons:
+        #     visitations = models.City.objects.filter(person_visitation__id=person.id).all()
+        #     for visitation in visitations:
+        #         province = models.Province.objects.filter(city__name=visitation.name).first()
+        #         print(person.firstname+person.lastname, visitation.name, province.name)
+        #
+        # # 这种方法要 查询如下次数，所以不推荐
+        # """
+        # SELECT `tb_person`.`id`, `tb_person`.`firstname`, `tb_person`.`lastname`, `tb_person`.`hometown_id`, `tb_person`.`living_id` FROM `tb_person`
+        # SELECT `tb_city`.`id`, `tb_city`.`name`, `tb_city`.`province_id` FROM `tb_city` INNER JOIN `tb_person_visitation` ON (`tb_city`.`id` = `tb_person_visitation`.`city_id`) WHERE `tb_person_visitation`.`person_id` = 1
+        # SELECT `tb_province`.`id`, `tb_province`.`name` FROM `tb_province` INNER JOIN `tb_city` ON (`tb_province`.`id` = `tb_city`.`province_id`) WHERE `tb_city`.`name` = '开封市' ORDER BY `tb_province`.`id` ASC LIMIT 1
+        # SELECT `tb_province`.`id`, `tb_province`.`name` FROM `tb_province` INNER JOIN `tb_city` ON (`tb_province`.`id` = `tb_city`.`province_id`) WHERE `tb_city`.`name` = '郑州市' ORDER BY `tb_province`.`id` ASC LIMIT 1
+        # SELECT `tb_province`.`id`, `tb_province`.`name` FROM `tb_province` INNER JOIN `tb_city` ON (`tb_province`.`id` = `tb_city`.`province_id`) WHERE `tb_city`.`name` = '广州市' ORDER BY `tb_province`.`id` ASC LIMIT 1
+        # SELECT `tb_city`.`id`, `tb_city`.`name`, `tb_city`.`province_id` FROM `tb_city` INNER JOIN `tb_person_visitation` ON (`tb_city`.`id` = `tb_person_visitation`.`city_id`) WHERE `tb_person_visitation`.`person_id` = 2
+        # SELECT `tb_province`.`id`, `tb_province`.`name` FROM `tb_province` INNER JOIN `tb_city` ON (`tb_province`.`id` = `tb_city`.`province_id`) WHERE `tb_city`.`name` = '郑州市' ORDER BY `tb_province`.`id` ASC LIMIT 1
+        # SELECT `tb_province`.`id`, `tb_province`.`name` FROM `tb_province` INNER JOIN `tb_city` ON (`tb_province`.`id` = `tb_city`.`province_id`) WHERE `tb_city`.`name` = '广州市' ORDER BY `tb_province`.`id` ASC LIMIT 1
+        # SELECT `tb_province`.`id`, `tb_province`.`name` FROM `tb_province` INNER JOIN `tb_city` ON (`tb_province`.`id` = `tb_city`.`province_id`) WHERE `tb_city`.`name` = '深圳市' ORDER BY `tb_province`.`id` ASC LIMIT 1
+        # SELECT `tb_city`.`id`, `tb_city`.`name`, `tb_city`.`province_id` FROM `tb_city` INNER JOIN `tb_person_visitation` ON (`tb_city`.`id` = `tb_person_visitation`.`city_id`) WHERE `tb_person_visitation`.`person_id` = 3
+        # SELECT `tb_province`.`id`, `tb_province`.`name` FROM `tb_province` INNER JOIN `tb_city` ON (`tb_province`.`id` = `tb_city`.`province_id`) WHERE `tb_city`.`name` = '开封市' ORDER BY `tb_province`.`id` ASC LIMIT 1
+        # SELECT `tb_province`.`id`, `tb_province`.`name` FROM `tb_province` INNER JOIN `tb_city` ON (`tb_province`.`id` = `tb_city`.`province_id`) WHERE `tb_city`.`name` = '郑州市' ORDER BY `tb_province`.`id` ASC LIMIT 1
+        # SELECT `tb_province`.`id`, `tb_province`.`name` FROM `tb_province` INNER JOIN `tb_city` ON (`tb_province`.`id` = `tb_city`.`province_id`) WHERE `tb_city`.`name` = '广州市' ORDER BY `tb_province`.`id` ASC LIMIT 1
+        # SELECT `tb_province`.`id`, `tb_province`.`name` FROM `tb_province` INNER JOIN `tb_city` ON (`tb_province`.`id` = `tb_city`.`province_id`) WHERE `tb_city`.`name` = '深圳市' ORDER BY `tb_province`.`id` ASC LIMIT 1
+        # SELECT `tb_city`.`id`, `tb_city`.`name`, `tb_city`.`province_id` FROM `tb_city` INNER JOIN `tb_person_visitation` ON (`tb_city`.`id` = `tb_person_visitation`.`city_id`) WHERE `tb_person_visitation`.`person_id` = 4
+        # SELECT `tb_province`.`id`, `tb_province`.`name` FROM `tb_province` INNER JOIN `tb_city` ON (`tb_province`.`id` = `tb_city`.`province_id`) WHERE `tb_city`.`name` = '广州市' ORDER BY `tb_province`.`id` ASC LIMIT 1
+        # SELECT `tb_province`.`id`, `tb_province`.`name` FROM `tb_province` INNER JOIN `tb_city` ON (`tb_province`.`id` = `tb_city`.`province_id`) WHERE `tb_city`.`name` = '深圳市' ORDER BY `tb_province`.`id` ASC LIMIT 1
+        # SELECT `tb_city`.`id`, `tb_city`.`name`, `tb_city`.`province_id` FROM `tb_city` INNER JOIN `tb_person_visitation` ON (`tb_city`.`id` = `tb_person_visitation`.`city_id`) WHERE `tb_person_visitation`.`person_id` = 5
+        # SELECT `tb_province`.`id`, `tb_province`.`name` FROM `tb_province` INNER JOIN `tb_city` ON (`tb_province`.`id` = `tb_city`.`province_id`) WHERE `tb_city`.`name` = '郑州市' ORDER BY `tb_province`.`id` ASC LIMIT 1
+        # SELECT `tb_province`.`id`, `tb_province`.`name` FROM `tb_province` INNER JOIN `tb_city` ON (`tb_province`.`id` = `tb_city`.`province_id`) WHERE `tb_city`.`name` = '广州市' ORDER BY `tb_province`.`id` ASC LIMIT 1
+        # SELECT `tb_province`.`id`, `tb_province`.`name` FROM `tb_province` INNER JOIN `tb_city` ON (`tb_province`.`id` = `tb_city`.`province_id`) WHERE `tb_city`.`name` = '深圳市' ORDER BY `tb_province`.`id` ASC LIMIT 1
+        # """
+
+        # # 使用Prefetch 对象优化
+        # # 主要优化点：
+        # # 使用 Prefetch 对象进行精确控制
+        # # 使用 select_related 在预取时连接省份表
+        # # 使用 only() 限制查询字段
+        # from django.db.models import Prefetch
+        # persons = models.Person.objects.only("firstname", "lastname").prefetch_related(
+        #     Prefetch(
+        #         "visitation",
+        #         queryset=models.City.objects.select_related("province").only("name", "province__name")
+        #     )
+        # )
+        # for person in persons:
+        #     for vis in person.visitation.all():
+        #         print(person.firstname + person.lastname, vis.name, vis.province.name)
+        #
+        # # """
+        # # SELECT `tb_person`.`id`, `tb_person`.`firstname`, `tb_person`.`lastname` FROM `tb_person`
+        # # SELECT (`tb_person_visitation`.`person_id`) AS `_prefetch_related_val_person_id`, `tb_city`.`id`, `tb_city`.`name`, `tb_city`.`province_id`, `tb_province`.`id`, `tb_province`.`name`
+        # # FROM `tb_city`
+        # # INNER JOIN `tb_person_visitation` ON (`tb_city`.`id` = `tb_person_visitation`.`city_id`)
+        # # LEFT OUTER JOIN `tb_province` ON (`tb_city`.`province_id` = `tb_province`.`id`)
+        # # WHERE `tb_person_visitation`.`person_id` IN (1, 2, 3, 4, 5)
+        # # """
+
+        # # 查询 哪个人的hometown在 广东省
+        # persons = models.Person.objects.filter(hometown__province__name="广东省")
+
+        # # # 查询 在广东省旅游的人的手机号，（visitation 在 广东省 的人的电话号）
+        # persons = models.Person.objects.filter(visitation__province__name="广东省").select_related("profile").distinct()
+        # for person in persons:
+        #     print(person, person.profile.mobile)
+        #
+        # # 如果有的 Person 不存在 PersonProfile，使用如下方法
+        # profiles = models.PersonProfile.objects.select_related("person").filter(person__visitation__province__name="广东省").distinct()
+        # for profile in profiles:
+        #     print(profile.mobile, profile.person)
+        # print(persons)
+        return JsonResponse({"msg": "get ok"})

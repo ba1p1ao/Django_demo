@@ -8,4 +8,5 @@ urlpatterns = [
     path("teacher/", TeacherView.as_view()),
     path("area/", AreaView.as_view()),
     path("people/", PeopleView.as_view()),
+    path("youhuasearch/", YouHuaSearchView.as_view())
 ]

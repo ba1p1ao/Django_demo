@@ -159,7 +159,6 @@ class People(models.Model):
 
     # symmetrical=False 表示单向关系，绑定的关系是单向，一般用于单向关注，黑名单
 
-
     class Meta:
         db_table = "orm_people"
         verbose_name = db_table
@@ -167,3 +166,73 @@ class People(models.Model):
 
     def __str__(self):
         return str({"id": self.id, "name": self.name})
+
+
+"""
+使用 select_related() / prefetch_related() 对数据查询优化
+"""
+
+
+class Province(models.Model):
+    name = models.CharField(max_length=50, verbose_name="省份")
+
+    class Meta:
+        db_table = "tb_province"
+        verbose_name = db_table
+        verbose_name_plural = verbose_name
+
+    def __str__(self):
+        return self.name
+
+
+class City(models.Model):
+    name = models.CharField(max_length=50, verbose_name="城市")
+    province = models.ForeignKey(
+        "Province", related_name="city", on_delete=models.SET_NULL, null=True,
+        verbose_name="省份"
+    )
+
+    class Meta:
+        db_table = "tb_city"
+        verbose_name = db_table
+        verbose_name_plural = verbose_name
+
+    def __str__(self):
+        return self.name
+
+
+class Person(models.Model):
+    firstname = models.CharField(max_length=50, verbose_name="姓")
+    lastname = models.CharField(max_length=50, verbose_name="名")
+    hometown = models.ForeignKey(
+        "City", related_name="person_hometown", on_delete=models.SET_NULL, null=True,
+        verbose_name="家乡"
+    )
+    living = models.ForeignKey(
+        "City", related_name="person_living", on_delete=models.SET_NULL, null=True,
+        verbose_name="居住地"
+    )
+    visitation = models.ManyToManyField("City", related_name="person_visitation", verbose_name="旅游地")
+
+    class Meta:
+        db_table = "tb_person"
+        verbose_name = db_table
+        verbose_name_plural = verbose_name
+
+    def __str__(self):
+        return self.firstname + self.lastname
+
+
+
+class PersonProfile(models.Model):
+    mobile = models.CharField(max_length=20, verbose_name="联系电话")
+    wechat = models.CharField(max_length=50, verbose_name="微信号")
+    person = models.OneToOneField("Person", related_name="profile", on_delete=models.CASCADE)
+
+    class Meta:
+        db_table = "tb_person_profile"
+        verbose_name = db_table
+        verbose_name_plural = verbose_name
+
+    def __str__(self):
+        return self.person.firstname + self.person.lastname + self.mobile
