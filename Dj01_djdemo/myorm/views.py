@@ -574,9 +574,6 @@ class PeopleView(View):
         return HttpResponse("people post ok")
 
 
-
-
-
 """
 使用 select_related()  /  prefetch_related() 对查询进行优化
 
@@ -801,4 +798,68 @@ class YouHuaSearchView(View):
         # for profile in profiles:
         #     print(profile.mobile, profile.person)
         # print(persons)
+
+        # 张无忌的家乡在哪个省份哪个城市？
+        # 张无忌的老乡都有谁？
+        # 张无忌都去过了哪些城市？
+        # 张三丰与张无忌有没有去过同样的城市？如果有，都有哪些城市？
+
+        # # 张无忌的家乡在哪个省份哪个城市？
+        # person = models.Person.objects.filter(firstname="张", lastname="无忌").select_related("hometown__province").first()
+        #
+        # # print(person[0].hometown.province.name, person[0].hometown.name) # 使用 person[0] 两次，每次都会触发数据库查询
+        # # 所以在确认结果唯一的情况下，使用 first() 或者使用 get 过滤数据，这样读取数据的时候会减少数据的查询次数
+        # print(person.hometown.province.name, person.hometown.name)
+
+        # # 张无忌的老乡都有谁？
+        # zwj_hometown_id = models.Person.objects.only('hometown_id').get(firstname="张", lastname="无忌").hometown_id
+        # if zwj_hometown_id:
+        #     persons = models.Person.objects.filter(hometown_id=zwj_hometown_id).exclude(
+        #         firstname="张", lastname="无忌"
+        #     )
+        #     print(persons)
+
+        # 张无忌都去过了哪些城市？
+        # from django.db.models import Q
+        # zwj_id = models.Person.objects.only("id").get(firstname="张", lastname="无忌").id
+        # citys = models.City.objects.filter(Q(person_hometown__id=zwj_id) | Q(person_visitation__id=zwj_id) | Q(person_living__id=zwj_id)).distinct()
+        # print(citys)
+
+        # # from django.db.models import Q
+        # #
+        # # 使用单个查询获取所有相关城市
+        # citys = models.City.objects.filter(
+        #     Q(person_visitation__firstname="张", person_visitation__lastname="无忌") |
+        #     Q(person_hometown__firstname="张", person_hometown__lastname="无忌") |
+        #     Q(person_living__firstname="张", person_living__lastname="无忌")
+        # ).distinct()
+        # print(citys)
+
+
+
+        # # 张三丰与张无忌有没有去过同样的城市？如果有，都有哪些城市？
+        # from django.db.models import Q
+        # # 分别查询然后取交集
+        # zwj_cities  = models.City.objects.filter(
+        #     Q(person_visitation__firstname="张", person_visitation__lastname="无忌")
+        # )
+        # zsf_cities = models.City.objects.filter(
+        #     Q(person_visitation__firstname="张", person_visitation__lastname="三丰")
+        # )
+        #
+        # common_cities = zwj_cities & zsf_cities
+        # """
+        # SELECT `tb_city`.`id`, `tb_city`.`name`, `tb_city`.`province_id`
+        # FROM `tb_city`
+        #          INNER JOIN `tb_person_visitation` ON (`tb_city`.`id` = `tb_person_visitation`.`city_id`)
+        #          INNER JOIN `tb_person` ON (`tb_person_visitation`.`person_id` = `tb_person`.`id`)
+        #          LEFT OUTER JOIN `tb_person_visitation` T4 ON (`tb_city`.`id` = T4.`city_id`)
+        #          LEFT OUTER JOIN `tb_person` T5 ON (T4.`person_id` = T5.`id`)
+        # WHERE (`tb_person`.`firstname` = '张' AND `tb_person`.`lastname` = '无忌' AND T5.`firstname` = '张' AND
+        #        T5.`lastname` = '三丰') LIMIT 21
+        # """
+        #
+        # print(common_cities)
+
+
         return JsonResponse({"msg": "get ok"})
