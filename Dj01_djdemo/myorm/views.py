@@ -862,4 +862,20 @@ class YouHuaSearchView(View):
         # print(common_cities)
 
 
+        # 查询所有人都经过哪些城市，以及去过的省份
+
+        from django.db.models import Prefetch
+        persons = models.Person.objects.prefetch_related(
+            Prefetch("visitation", queryset=models.City.objects.select_related("province"))
+        )
+
+
+        for person in persons:
+            print(person.firstname + person.lastname, end=": ")
+            for visitation in person.visitation.all():
+                print(visitation.name, end=",")
+                print(visitation.province.name, end='|')
+            print()
+
+
         return JsonResponse({"msg": "get ok"})
