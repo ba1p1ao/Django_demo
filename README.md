@@ -9,4 +9,6 @@ pip install django==4.2.5
 pip install orjson
 pip instlla pymysql
 pip install cryptography
+
+pip install Pillow
 ```
