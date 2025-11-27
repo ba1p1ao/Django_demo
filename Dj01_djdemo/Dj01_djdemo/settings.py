@@ -65,7 +65,8 @@ INSTALLED_APPS = [
     # 添加model
     "student",
     "myorm",
-    "myormlianxi"
+    "myormlianxi",
+    "mycomponent",
 ]
 
 
@@ -203,3 +204,8 @@ SESSION_ENGINE = "django.contrib.sessions.backends.file"
 
 # session 文件存储目录
 SESSION_FILE_PATH = BASE_DIR / "myfiles"
+
+# 设置保存上传文件的公共路径
+MEDIA_ROOT = BASE_DIR / "uploads/"
+# 访问上传文件的url地址前缀
+MEDIA_URL = "/uploads/"

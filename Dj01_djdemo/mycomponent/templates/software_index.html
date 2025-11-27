@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>software</title>
+</head>
+<body>
+<form method="post" action="http://192.168.10.101:8001/component/software/" enctype="multipart/form-data">
+    {% csrf_token %}
+    软件名：<input type="text" name="name"><br><br>
+    版本号：<input type="text" name="version"><br><br>
+    官方网址：<input type="text" name="website"><br><br>
+    软件缩略图：<input type="file" name="picture"/><br><br>
+    软件上传：<input type="file" name="downloads"/><br><br>
+    <input type="submit" value="提交">
+</form>
+</body>
+</html>

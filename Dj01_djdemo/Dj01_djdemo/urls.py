@@ -47,6 +47,6 @@ urlpatterns = [
     path("cbv/", include("mycbv.urls", namespace="cbv")),
     path("student/", include("student.urls", namespace="student")),
     path("orm/", include("myorm.urls", namespace="orm")),
-
     path("ormlianxi/", include("myormlianxi.urls", namespace="ormlianxi")),
+    path("component/", include("mycomponent.utls")),
 ]

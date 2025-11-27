@@ -181,6 +181,7 @@ def queryset2dict(data, fields=None, exclude=None):
             "count": len(data),
             "result": data,
         }
+
     return result
 
 
