@@ -399,11 +399,32 @@ class BookView(View):
         #
 
 
-
-
-
-
-
-
-
         return HttpResponse("get ok")
+
+
+
+
+class ModelDemoView(View):
+    def get(self, request):
+
+        # md = models.ModelDemo.objects.all()
+        # print(md)
+        # # 查找成年人，年龄大于等于18岁
+        # md = models.ModelDemo.objects.filter(age__gte=18)
+        # print(md)
+
+        # # 不推荐使用这种方式，因为代码结构不规范了，查询数据库操作的时候一般都要使用objects
+        # md = models.ModelDemo.get_access_user()
+        # print(md)
+
+        """当需要给模型扩展一些数据操作方法或者属性时，可以使用自定义模型模型管理器或者代理模型"""
+
+        md = models.ModelDemo.objects.get_access_user()
+        print(md) # <QuerySet [<ModelDemo: 李四>, <ModelDemo: 赵六>, <ModelDemo: 钱七>]>
+
+
+        female = models.FemaleUser.all()
+        print(female)
+        male = models.MaleUser.all()
+        print(male)
+        return HttpResponse("model demo view get ok")
