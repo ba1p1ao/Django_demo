@@ -1,0 +1,80 @@
+{% load my_filter %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>学生信息</title>
+    <style>
+        .table-data {
+            border-collapse: collapse;
+            width: 680px;
+        }
+
+        .table-data td, th {
+            border: 1px solid red;
+            font-weight: normal;
+            text-align: center;
+        }
+
+        .paginator {
+            width: 680px;
+            text-align: center;
+            padding-top: 10px;
+        }
+
+        .paginator a {
+            color: #000;
+            text-decoration: none;
+            border: 1px solid lightsalmon;
+            padding: 4px 8px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .paginator a.current,
+        .paginator a:hover {
+            background: lightsalmon;
+            color: wheat;
+        }
+    </style>
+</head>
+<body>
+{#{% for student in page.object_list %}#}
+{#    <p>{{ student.name }}</p>#}
+{#{% endfor %}#}
+<table class="table-data">
+    <tr>
+        <th>ID</th>
+        <th>姓名</th>
+        <th>年龄</th>
+        <th>性别</th>
+        <th>班级</th>
+        <th>状态</th>
+    </tr>
+    {% for student in page.object_list %}
+        <tr>
+            <td>{{ student.id }}</td>
+            <td>{{ student.name }}</td>
+            <td>{{ student.age }}</td>
+            <td>{{ student.sex | get_sex}}</td>
+            <td>{{ student.classmate }}</td>
+            <td>{{ student.status }}</td>
+        </tr>
+    {% endfor %}
+
+</table>
+<div class="paginator">
+    <a href="?page=1">首页</a>
+    {% if page.has_previous %}
+        <a href="?page={{ page.previous_page_number }}">上一页</a>
+        <a href="?page={{ page.previous_page_number }}">{{ page.previous_page_number }}</a>
+    {% endif %}
+    <a href="">{{ page.number }}</a>
+    {% if page.has_next %}
+        <a href="?page={{ page.next_page_number }}">{{ page.next_page_number }}</a>
+        <a href="?page={{ page.next_page_number }}">下一页</a>
+    {% endif %}
+    <a href="?page={{ page.paginator.num_pages }}">尾页</a>
+</div>
+</body>
+</html>

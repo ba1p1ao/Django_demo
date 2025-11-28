@@ -22,3 +22,7 @@ def toFixed(value, n: int=2):
 @register.filter(name="get_item")
 def get_item(value, key):
     return value.get(key, "")
+
+@register.filter(name="get_sex")
+def get_sex(value):
+    return "男" if value else "女"

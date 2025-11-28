@@ -93,8 +93,8 @@ ROOT_URLCONF = "Dj01_djdemo.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "myfiles"],
-        "APP_DIRS": True,
+        "DIRS": [BASE_DIR / "myfiles"], # 会在 BASE_DIR / myfiles 中寻找 模板文件
+        "APP_DIRS": True, # Django会自动在每个已安装应用（在 INSTALLED_APPS 中列出）的 templates 文件夹里寻找模板
         "OPTIONS": {
             "context_processors": [
                 "django.template.context_processors.debug",
