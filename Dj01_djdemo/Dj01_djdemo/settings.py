@@ -146,6 +146,18 @@ DATABASES = {
 }
 
 
+# 添加 redis 缓存
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1", # select 1 选择 1 redis 库
+        "TIMEOUT": 60, # 设置超时时间，默认5分钟
+    }
+}
+
+
+
+
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 
