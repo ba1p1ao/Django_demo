@@ -40,17 +40,28 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     'rest_framework', # DRF 框架
-
+    'corsheaders', # 跨域配置
     # 注册子应用
-    "apps.user",
+    "apps.address",
     "apps.cart",
+    "apps.comment",
+    "apps.goods",
+    "apps.menu",
+    "apps.order",
+    "apps.user",
 ]
 
+# 允许所有域名跨域 cors_origin_allow_all = true
+CORS_ORIGIN_ALLOW_ALL = True
+# 允许携带cookie cors_allow_credentials
+CORS_ALLOW_CREDENTIALS = True
+
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware', # 配置跨域
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    # 'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
