@@ -28,7 +28,8 @@ class Goods(models.Model):
             'target_url': self.target_url,
             'jd_price': self.jd_price,
             'p_price': self.p_price,
-            'image': IMAGE_URL + self.image,
+            # 'image': IMAGE_URL + self.image, # 未使用序列化
+            'image': self.image, # 使用序列化
             'shop_name': self.shop_name,
             'shop_id': self.shop_id,
             'spu_id': self.spu_id,
