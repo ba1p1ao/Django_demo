@@ -39,7 +39,6 @@ class Goods(models.Model):
         return json.dumps(result, cls=DecimalEncoder, ensure_ascii=False)
 
     class Meta:
-        managed = False
         db_table = 'goods'
 
 class DecimalEncoder(json.JSONEncoder):

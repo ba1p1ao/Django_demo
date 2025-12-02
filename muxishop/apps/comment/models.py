@@ -13,5 +13,4 @@ class Comment(models.Model):
     create_time = models.DateTimeField(blank=True, null=True)
 
     class Meta:
-        managed = False
         db_table = 'comment'

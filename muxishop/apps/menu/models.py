@@ -1,8 +1,8 @@
 import json
-
 from django.db import models
 
 # Create your models here.
+
 
 class MainMenu(models.Model):
     main_menu_id = models.IntegerField()
@@ -12,15 +12,13 @@ class MainMenu(models.Model):
     # 在这里我们自己手动序列化
     def __str__(self):
         result = {}
-        result['main_menu_id'] = self.main_menu_id
+        result["main_menu_id"] = self.main_menu_id
         result["main_menu_name"] = self.main_menu_name
         # result["main_menu_url"] = self.main_menu_url
-        return json.dumps(result,ensure_ascii=False)
-
+        return json.dumps(result, ensure_ascii=False)
 
     class Meta:
-        managed = False
-        db_table = 'main_menu'
+        db_table = "main_menu"
 
 
 class SubMenu(models.Model):
@@ -32,12 +30,11 @@ class SubMenu(models.Model):
 
     def __str__(self):
         result = {}
-        result["main_menu_id"]=self.main_menu_id
-        result["sub_menu_id"]=self.sub_menu_id
-        result["sub_menu_type"]=self.sub_menu_type
-        result["sub_menu_name"]=self.sub_menu_name
-        return json.dumps(result,ensure_ascii=False)
+        result["main_menu_id"] = self.main_menu_id
+        result["sub_menu_id"] = self.sub_menu_id
+        result["sub_menu_type"] = self.sub_menu_type
+        result["sub_menu_name"] = self.sub_menu_name
+        return json.dumps(result, ensure_ascii=False)
 
     class Meta:
-        managed = False
-        db_table = 'sub_menu'
+        db_table = "sub_menu"

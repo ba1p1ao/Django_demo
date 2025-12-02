@@ -10,11 +10,10 @@ class Order(models.Model):
     pay_time = models.DateTimeField(blank=True, null=True)
     ali_trade_no = models.CharField(max_length=255, blank=True, null=True)
     is_delete = models.PositiveIntegerField(blank=True, null=True)
-    create_time = models.DateTimeField(blank=True, null=True)
-    # update_time = models.DateTimeField(blank=True, null=True)
+    create_time = models.DateTimeField(blank=True, null=True, auto_now_add=True)
+    update_time = models.DateTimeField(blank=True, null=True, auto_now=True)
 
     class Meta:
-        managed = False
         db_table = 'order'
 
 
@@ -22,8 +21,7 @@ class OrderGoods(models.Model):
     trade_no = models.CharField(max_length=255, blank=True, null=True)
     sku_id = models.CharField(max_length=255, blank=True, null=True)
     goods_num = models.IntegerField(blank=True, null=True)
-    # create_time = models.DateTimeField(blank=True, null=True)
-
+    create_time = models.DateTimeField(blank=True, null=True, auto_now_add=True)
+    update_time = models.DateTimeField(blank=True, null=True, auto_now=True)
     class Meta:
-        managed = False
         db_table = 'order_goods'
