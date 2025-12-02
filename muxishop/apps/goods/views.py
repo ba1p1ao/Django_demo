@@ -24,13 +24,13 @@ class GoodsCategoryAPIView(APIView):
         return GoodsResponse.success(goods_list, safe=False)
 
 
-from apps.goods.serializers import GoodsSerialization
+from apps.goods.serializers import GoodsSerializer
 
-
+# 获取单个商品详细的接口
 class GoodsDatilAPIView(APIView):
     def get(self, request: HttpRequest, sku_id: str = ""):
         if sku_id:
             good = models.Goods.objects.get(sku_id=sku_id)
 
-        result = GoodsSerialization(instance=good).data
+        result = GoodsSerializer(instance=good).data
         return GoodsResponse.success(result, safe=False)

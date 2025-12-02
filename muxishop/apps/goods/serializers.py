@@ -3,7 +3,7 @@ from apps.goods import models
 from muxishop.settings import IMAGE_URL
 
 
-class GoodsSerialization(serializers.ModelSerializer):
+class GoodsSerializer(serializers.ModelSerializer):
     # 这里边写的字段就是你想要进行序列化时处理的字段
 
     image = serializers.SerializerMethodField()
