@@ -41,6 +41,7 @@ class Goods(models.Model):
     class Meta:
         db_table = 'goods'
 
+# 因为 json 转换的时候不识别 decimal.Decimal，所以需要转换
 class DecimalEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, decimal.Decimal):
