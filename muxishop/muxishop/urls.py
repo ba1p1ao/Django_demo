@@ -32,4 +32,7 @@ urlpatterns = [
     path("order/", include("order.urls")),
     # address 请求
     path("address/", include("address.urls")),
+    # comment 请求
+    path("comment/", include("comment.urls")),
+
 ]
