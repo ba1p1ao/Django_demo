@@ -8,7 +8,6 @@ class User(models.Model):
     gender = models.CharField(max_length=255, blank=True, null=True)
     email = models.CharField(max_length=255, blank=True, null=True,unique=True)
     password = models.CharField(max_length=255, blank=True, null=True)
-    create_time = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         db_table = 'user'

@@ -18,7 +18,6 @@ class Goods(models.Model):
     mk_price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     vender_id = models.IntegerField(blank=True, null=True)
     find = models.IntegerField(blank=True, null=True)
-    create_time = models.DateTimeField(blank=True, null=True)
 
     def __str__(self):
         result = {
