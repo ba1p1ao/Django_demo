@@ -59,3 +59,22 @@ class CartResponse:
     def other(data, safe=True):
         response_data = {"status": 30002, "data": data}
         return JsonResponse(response_data, safe=safe)
+
+
+
+# 用户响应类： 4XXXX
+class UserResponse:
+    @staticmethod
+    def success(data, safe=True):
+        response_data = {"status": 40000, "data": data}
+        return JsonResponse(response_data, safe=safe)
+
+    @staticmethod
+    def failed(data, safe=True):
+        response_data = {"status": 40001, "data": data}
+        return JsonResponse(response_data, safe=safe)
+
+    @staticmethod
+    def other(data, safe=True):
+        response_data = {"status": 40002, "data": data}
+        return JsonResponse(response_data, safe=safe)

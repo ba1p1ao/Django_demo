@@ -161,7 +161,7 @@ STATICFILES_DIRS = [
     str(BASE_DIR / "static"),
 ]
 
-IMAGE_URL = 'http://localhost:8001/static/product_images/'
+IMAGE_URL = 'http://localhost:8000/static/product_images/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
