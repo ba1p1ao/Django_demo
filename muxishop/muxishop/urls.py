@@ -30,4 +30,6 @@ urlpatterns = [
     path("user/", include("user.urls")),
     # order 请求
     path("order/", include("order.urls")),
+    # address 请求
+    path("address/", include("address.urls")),
 ]
