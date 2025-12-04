@@ -1,7 +1,10 @@
+from rest_framework.generics import GenericAPIView
 from rest_framework.views import APIView
 from apps.user.serializers import UserSerializer
 from apps.user import models
 from utils.ResponseMessage import UserResponse
+from utils.PasswordEncode import get_md5
+from utils.JWTAuth import create_token, get_payload
 
 
 class UserRegisterAPIView(APIView):
@@ -30,3 +33,31 @@ class UserRegisterAPIView(APIView):
             return UserResponse.success(user_json, safe=False)
         except Exception as e:
             return UserResponse.failed("用户信息不存在", safe=False)
+
+
+class UserLoginView(GenericAPIView):
+    def post(self, request):
+        email = request.data.get("email")
+        password = request.data.get("password")
+        token = request.data.get("token")
+        if token:
+            payload, is_valid = get_payload(token)
+            if is_valid:
+                return UserResponse.success(payload, safe=False)
+        user = models.User.objects.get(email=email)
+        if not user:
+            return UserResponse.other("用户名或密码错误", safe=False)
+
+        db_password = user.password
+        md5_password = get_md5(password)
+        print(db_password, md5_password)
+        if db_password != md5_password:
+            return UserResponse.other("用户名或密码错误", safe=False)
+        payload = UserSerializer(instance=user, many=False).data
+        token = create_token(payload=payload, timeout=6000)
+        response_data = {
+            "username": user.name,
+            "email": email,
+            "token": token,
+        }
+        return UserResponse.success(response_data, safe=False)
