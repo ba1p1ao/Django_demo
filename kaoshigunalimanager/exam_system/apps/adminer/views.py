@@ -114,7 +114,8 @@ class UserUpdateStatusView(APIView):
     @check_permission
     def put(self, request, user_id):
         payload = request.user
-        
+        if user_id == payload.get("id"):
+            return MyResponse.failed(message="当前状态下不能修改自己的状态")
         try:
             user = User.objects.get(id=user_id)
         except User.DoesNotExist:
@@ -125,5 +126,23 @@ class UserUpdateStatusView(APIView):
         
         update_count = User.objects.filter(id=user_id).update(status=status)
         if not update_count:
-            return MyResponse.failed(message="修改状态失败")
-        return MyResponse.success("修改成功")
+            return MyResponse.failed(message="修改用户状态失败")
+        return MyResponse.success("修改用户状态成功")
+
+class UserUpdateRoleView(APIView):
+    @check_permission
+    def put(self, request, user_id):
+        payload = request.user
+        if user_id == payload.get("id"):
+            return MyResponse.failed(message="当前状态下不能修改自己的角色")
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return MyResponse.failed(message="用户信息不存在")
+        
+        role = request.data.get("role", 0)
+        
+        update_count = User.objects.filter(id=user_id).update(role=role)
+        if not update_count:
+            return MyResponse.failed(message="修改用户角色失败")
+        return MyResponse.success("修改用户角色成功")
