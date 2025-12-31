@@ -70,7 +70,6 @@ class UserStatisticsView(APIView):
         }
         
         for user in users:
-            print(user.role)
             if user.role == "student":
                 response_data["student_count"] += 1
             elif user.role == "teacher":
@@ -109,3 +108,22 @@ class UserInfoView(APIView):
             return MyResponse.success(data=ser_user_data)
         except Exception as e:
             return MyResponse.failed(f"获取数据出错，{e}")
+        
+        
+class UserUpdateStatusView(APIView):
+    @check_permission
+    def put(self, request, user_id):
+        payload = request.user
+        
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return MyResponse.failed(message="用户信息不存在")
+        
+        
+        status = request.data.get("status", 0)
+        
+        update_count = User.objects.filter(id=user_id).update(status=status)
+        if not update_count:
+            return MyResponse.failed(message="修改状态失败")
+        return MyResponse.success("修改成功")
