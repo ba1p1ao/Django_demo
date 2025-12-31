@@ -58,29 +58,31 @@
           </template>
         </el-table-column>
         <el-table-column prop="create_time" label="注册时间" width="180" />
-        <el-table-column label="操作" width="250" fixed="right">
+        <el-table-column label="操作" width="320" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" size="small" @click="handleViewDetail(row)">详情</el-button>
-            <el-button 
-              :type="row.status === 1 ? 'warning' : 'success'" 
-              size="small" 
-              @click="handleToggleStatus(row)"
-            >
-              {{ row.status === 1 ? '禁用' : '启用' }}
-            </el-button>
-            <el-dropdown @command="(cmd) => handleRoleCommand(cmd, row)">
-              <el-button type="info" size="small">
-                角色<el-icon class="el-icon--right"><arrow-down /></el-icon>
+            <div class="action-buttons">
+              <el-button type="primary" size="small" @click="handleViewDetail(row)">详情</el-button>
+              <el-button 
+                :type="row.status === 1 ? 'warning' : 'success'" 
+                size="small" 
+                @click="handleToggleStatus(row)"
+              >
+                {{ row.status === 1 ? '禁用' : '启用' }}
               </el-button>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item command="student">设为学生</el-dropdown-item>
-                  <el-dropdown-item command="teacher">设为教师</el-dropdown-item>
-                  <el-dropdown-item command="admin">设为管理员</el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
-            <el-button type="danger" size="small" @click="handleDelete(row)">删除</el-button>
+              <el-dropdown @command="(cmd) => handleRoleCommand(cmd, row)">
+                <el-button type="info" size="small">
+                  角色<el-icon class="el-icon--right"><arrow-down /></el-icon>
+                </el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="student">设为学生</el-dropdown-item>
+                    <el-dropdown-item command="teacher">设为教师</el-dropdown-item>
+                    <el-dropdown-item command="admin">设为管理员</el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+              <el-button type="danger" size="small" @click="handleDelete(row)">删除</el-button>
+            </div>
           </template>
         </el-table-column>
       </el-table>
@@ -323,5 +325,16 @@ onMounted(() => {
   margin-top: 20px;
   display: flex;
   justify-content: flex-end;
+}
+
+.action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+}
+
+.action-buttons .el-button {
+  margin: 0;
 }
 </style>

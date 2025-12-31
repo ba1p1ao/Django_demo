@@ -1,5 +1,5 @@
 from rest_framework.views import APIView
-
+from django.db.models import Count, Q
 from apps.user.models import User
 from apps.user.serializers import UserSerializers
 from utils.ResponseMessage import check_permission, check_auth, MyResponse
@@ -54,4 +54,37 @@ class UserListView(APIView):
 class UserStatisticsView(APIView):
     @check_permission
     def get(self, request):
-        return MyResponse.failed()
+        payload = request.user
+        
+        users = User.objects.all()
+        total_users = users.count()
+        response_data = {
+            "total_users": total_users,
+            "student_count": 0,
+            "teacher_count": 0,
+            "admin_count": 0,
+            "active_users": 0,
+            "disabled_users": 0,
+        }
+        
+        for user in users:
+            print(user.role)
+            if user.role == "student":
+                response_data["student_count"] += 1
+            elif user.role == "teacher":
+                response_data["teacher_count"] += 1
+            elif user.role == "admin":
+                response_data["admin_count"] += 1
+            elif user.status == 1:
+                response_data["active_users"] += 1
+            elif user.status == 0:
+                response_data["disabled_users"] += 1
+        
+        return MyResponse.success(data=response_data)
+    
+
+class UserInfoView(APIView):
+    @check_permission
+    def get(self, request):
+        payload = request.user
+        
