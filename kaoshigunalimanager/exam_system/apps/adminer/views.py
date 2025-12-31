@@ -1,6 +1,8 @@
 from rest_framework.views import APIView
 from django.db.models import Count, Q
 from apps.user.models import User
+from apps.exam.models import Exam, ExamRecord
+from apps.question.models import Question
 from apps.user.serializers import UserSerializers
 from utils.ResponseMessage import check_permission, check_auth, MyResponse
 
@@ -85,6 +87,25 @@ class UserStatisticsView(APIView):
 
 class UserInfoView(APIView):
     @check_permission
-    def get(self, request):
+    def get(self, request, user_id):
         payload = request.user
         
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return MyResponse.failed(message="用户信息不存在")
+        
+        ser_user_data = UserSerializers(instance=user).data
+        # print(ser_user_data)
+        try:
+            exam_count = Exam.objects.filter(creator_id=user_id).count()
+            question_count = Question.objects.filter(creator_id=user_id).count()
+            record_count = ExamRecord.objects.filter(user_id=user_id).count()
+
+            ser_user_data["exam_count"] = exam_count
+            ser_user_data["question_count"] = question_count
+            ser_user_data["record_count"] = record_count
+            
+            return MyResponse.success(data=ser_user_data)
+        except Exception as e:
+            return MyResponse.failed(f"获取数据出错，{e}")
