@@ -3,7 +3,7 @@ import request from '@/utils/request'
 // 下载题目导入模板
 export const downloadImportTemplate = () => {
   return request({
-    url: '/question/import/template',
+    url: '/question/import/template/',
     method: 'get',
     responseType: 'blob'
   })
@@ -14,7 +14,7 @@ export const importQuestions = (file) => {
   const formData = new FormData()
   formData.append('file', file)
   return request({
-    url: '/question/import',
+    url: '/question/import/',
     method: 'post',
     data: formData,
     headers: {
@@ -26,7 +26,7 @@ export const importQuestions = (file) => {
 // 导出题目
 export const exportQuestions = (data) => {
   return request({
-    url: '/question/export',
+    url: '/question/export/',
     method: 'post',
     data,
     responseType: 'blob'
@@ -36,7 +36,7 @@ export const exportQuestions = (data) => {
 // 导出错题本
 export const exportMistakeQuestions = () => {
   return request({
-    url: '/mistake/export',
+    url: '/mistake/export/',
     method: 'post',
     responseType: 'blob'
   })

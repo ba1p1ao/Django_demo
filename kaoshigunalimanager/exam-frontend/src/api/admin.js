@@ -3,7 +3,7 @@ import request from '@/utils/request'
 // 获取用户列表
 export const getUserList = (params) => {
   return request({
-    url: '/admin/users',
+    url: '/admin/users/',
     method: 'get',
     params
   })
@@ -12,7 +12,7 @@ export const getUserList = (params) => {
 // 获取用户详情
 export const getUserDetail = (id) => {
   return request({
-    url: `/admin/users/${id}`,
+    url: `/admin/users/${id}/`,
     method: 'get'
   })
 }
@@ -20,7 +20,7 @@ export const getUserDetail = (id) => {
 // 更新用户状态
 export const updateUserStatus = (id, data) => {
   return request({
-    url: `/admin/users/${id}/status`,
+    url: `/admin/users/${id}/status/`,
     method: 'put',
     data
   })
@@ -29,7 +29,7 @@ export const updateUserStatus = (id, data) => {
 // 更新用户角色
 export const updateUserRole = (id, data) => {
   return request({
-    url: `/admin/users/${id}/role`,
+    url: `/admin/users/${id}/role/`,
     method: 'put',
     data
   })
@@ -38,7 +38,7 @@ export const updateUserRole = (id, data) => {
 // 删除用户
 export const deleteUser = (id) => {
   return request({
-    url: `/admin/users/${id}`,
+    url: `/admin/users/${id}/`,
     method: 'delete'
   })
 }
@@ -46,7 +46,7 @@ export const deleteUser = (id) => {
 // 获取用户统计数据
 export const getUserStatistics = () => {
   return request({
-    url: '/admin/users/statistics',
+    url: '/admin/users/statistics/',
     method: 'get'
   })
 }
