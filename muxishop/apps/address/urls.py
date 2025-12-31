@@ -3,6 +3,8 @@ from apps.address import views
 
 urlpatterns = [
     path("", views.UserAddressGenericAPIView.as_view()),
+    path("default/", views.UserAddressDefaultGenericAPIView.as_view()),
     path("list/", views.UserAddressListGenericAPIView.as_view()),
+    path("edit/", views.UserAddressEditGenericAPIView.as_view()),
     re_path(r"(?P<pk>\d+)/$", views.UserAddressGenericAPIView.as_view()),
 ]

@@ -78,3 +78,92 @@ class UserResponse:
     def other(data, safe=True):
         response_data = {"status": 40002, "data": data}
         return JsonResponse(response_data, safe=safe)
+
+# 评论响应类： 5XXXX
+class CommentResponse:
+    @staticmethod
+    def success(data, safe=True):
+        response_data = {"status": 50000, "data": data}
+        return JsonResponse(response_data, safe=safe)
+
+    @staticmethod
+    def failed(data, safe=True):
+        response_data = {"status": 50001, "data": data}
+        return JsonResponse(response_data, safe=safe)
+
+    @staticmethod
+    def other(data, safe=True):
+        response_data = {"status": 50002, "data": data}
+        return JsonResponse(response_data, safe=safe)
+
+
+# 订单响应类： 6XXXX
+class OrderResponse:
+    @staticmethod
+    def success(data, safe=True):
+        response_data = {"status": 60000, "data": data}
+        return JsonResponse(response_data, safe=safe)
+
+    @staticmethod
+    def failed(data, safe=True):
+        response_data = {"status": 60001, "data": data}
+        return JsonResponse(response_data, safe=safe)
+
+    @staticmethod
+    def other(data, safe=True):
+        response_data = {"status": 60002, "data": data}
+        return JsonResponse(response_data, safe=safe)
+
+
+# 用户地址响应类： 7XXXX
+class AddressResponse:
+    @staticmethod
+    def success(data, safe=True):
+        response_data = {"status": 70000, "data": data}
+        return JsonResponse(response_data, safe=safe)
+
+    @staticmethod
+    def failed(data, safe=True):
+        response_data = {"status": 70001, "data": data}
+        return JsonResponse(response_data, safe=safe)
+
+    @staticmethod
+    def other(data, safe=True):
+        response_data = {"status": 70002, "data": data}
+        return JsonResponse(response_data, safe=safe)
+
+
+# 用户地址响应类： 8XXXX
+class PayResponse:
+    @staticmethod
+    def success(data, safe=True):
+        response_data = {"status": 80000, "data": data}
+        return JsonResponse(response_data, safe=safe)
+
+    @staticmethod
+    def failed(data, safe=True):
+        response_data = {"status": 80001, "data": data}
+        return JsonResponse(response_data, safe=safe)
+
+    @staticmethod
+    def other(data, safe=True):
+        response_data = {"status": 80002, "data": data}
+        return JsonResponse(response_data, safe=safe)
+
+
+# 工具响应类： 9XXXX
+class ToolsResponse:
+    @staticmethod
+    def success(data, safe=True):
+        response_data = {"status": 90000, "data": data}
+        return JsonResponse(response_data, safe=safe)
+
+    @staticmethod
+    def failed(data, safe=True):
+        response_data = {"status": 90001, "data": data}
+        return JsonResponse(response_data, safe=safe)
+
+    @staticmethod
+    def other(data, safe=True):
+        response_data = {"status": 90002, "data": data}
+        return JsonResponse(response_data, safe=safe)

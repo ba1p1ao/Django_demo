@@ -3,6 +3,6 @@ from apps.order import views
 
 
 urlpatterns = [
-    path("", views.OrderGoodsGenericAPIView.as_view()),
-    re_path(r"(?P<trade_no>.*)/$", views.OrderGoodsGenericAPIView.as_view()),
+    path("", views.OrderGenericAPIView.as_view()),
+    re_path(r"(?P<trade_no>.*)/$", views.OrderManyGoodsGenericAPIView.as_view()),
 ]

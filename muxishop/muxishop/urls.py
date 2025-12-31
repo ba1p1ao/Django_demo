@@ -34,5 +34,11 @@ urlpatterns = [
     path("address/", include("address.urls")),
     # comment 请求
     path("comment/", include("comment.urls")),
+    # 个人信息
+    # path("profile/", include("user.urls")),
+    # pay 请求
+    path("pay/", include("pay.urls")),
+    # tools 请求
+    path("tools/", include("tools.urls")),
 
 ]

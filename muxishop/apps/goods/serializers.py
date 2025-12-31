@@ -7,7 +7,6 @@ class GoodsSerializer(serializers.ModelSerializer):
     # 这里边写的字段就是你想要进行序列化时处理的字段
 
     image = serializers.SerializerMethodField()
-    create_time = serializers.DateTimeField('%Y-%m-%d %X')
 
     def get_image(self, obj):
         new_image_url = IMAGE_URL + obj.image
@@ -18,4 +17,14 @@ class GoodsSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-    
+class GoodsSearchSerializer(serializers.ModelSerializer):
+    """商品搜索专用序列化器，包含评论数量"""
+    comment_count = serializers.IntegerField(read_only=True)
+    image = serializers.SerializerMethodField()
+
+    def get_image(self, obj):
+        return IMAGE_URL + obj.image
+
+    class Meta:
+        model = models.Goods
+        fields = ['sku_id', 'name', 'p_price', 'shop_name', 'image', 'comment_count']

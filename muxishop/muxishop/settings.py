@@ -15,7 +15,7 @@ from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(BASE_DIR / "apps")) # 将 apps 的绝对路径加入到环境变量中
+sys.path.insert(0, str(BASE_DIR / "apps"))  # 将 apps 的绝对路径加入到环境变量中
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
@@ -28,7 +28,6 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-
 # Application definition
 
 INSTALLED_APPS = [
@@ -39,8 +38,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    'rest_framework', # DRF 框架
-    'corsheaders', # 跨域配置
+    'rest_framework',  # DRF 框架
+    'corsheaders',  # 跨域配置
     # 注册子应用
     "apps.address",
     "apps.cart",
@@ -49,6 +48,8 @@ INSTALLED_APPS = [
     "apps.menu",
     "apps.order",
     "apps.user",
+    "apps.pay",
+    "apps.tools",
 ]
 
 # 允许所有域名跨域 cors_origin_allow_all = true
@@ -57,7 +58,7 @@ CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_CREDENTIALS = True
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware', # 配置跨域
+    'corsheaders.middleware.CorsMiddleware',  # 配置跨域
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -87,7 +88,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'muxishop.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
@@ -104,7 +104,7 @@ DATABASES = {
         # install_as_MySQLdb()
         # 用来让 pymysql 以 MySQLdb 的方式来对接 ORM
 
-        "ENGINE": "django.db.backends.mysql", # ORM的底层对接pymysql的核心引擎类
+        "ENGINE": "django.db.backends.mysql",  # ORM的底层对接pymysql的核心引擎类
         "NAME": "muxishop",
         "HOST": "127.0.0.1",
         "PORT": 3306,
@@ -117,6 +117,31 @@ DATABASES = {
     },
 }
 
+# CACHES = {
+#     'default': {
+#         'BACKEND': 'django_redis.cache.RedisCache',
+#         'LOCATION': 'redis://127.0.0.1:6379/1',  # Redis地址，/1表示使用1号数据库
+#         'OPTIONS': {
+#             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+#             'CONNECTION_POOL_KWARGS': {'max_connections': 100},
+#             'PASSWORD': '',  # 如果有密码的话
+#             'SOCKET_CONNECT_TIMEOUT': 5,  # 连接超时时间（秒）
+#         },
+#         'KEY_PREFIX': 'muxishop_captcha',  # 缓存key前缀
+#     }
+# }
+# 添加 redis 缓存
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1",  # select 1 选择 1 redis 库
+        "TIMEOUT": 60,  # 设置超时时间，默认5分钟
+        # 'KEY_PREFIX': 'muxishop_captcha',  # 缓存key前缀
+    }
+}
+
+# 设置验证码过期时间（秒）
+CAPTCHA_EXPIRE_TIME = 5 * 60  # 5分钟
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -136,7 +161,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
@@ -148,7 +172,6 @@ TIME_ZONE = "Asia/Shanghai"
 USE_I18N = True
 
 USE_TZ = True
-
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
@@ -167,3 +190,40 @@ IMAGE_URL = 'http://localhost:8000/static/product_images/'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# 全局的token验证配置
+JWT_EXPIRE_TIME = 3600
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "utils.JWTAuth.JWTHeaderQueryParamAuthentication"
+    ],
+    "EXCEPTION_HANDLER": "utils.exceptions.custom_exception_handler",
+}
+
+# 支付宝配置信息
+APPID = "9021000158671301"
+ALI_PUB_KEY_PATH = BASE_DIR / "apps/pay/keys/alipay_key.txt"
+PRIVATE_KEY_PATH = BASE_DIR / "apps/pay/keys/private_key.txt"
+# 异步接收rul  post请求
+APP_NOTIFY_URL = "http://127.0.0.1:8000/pay/alipay/return"
+# 同步接收url，就是用户在页面上支付成功之后，然后就跳转的页面  get请求
+RETURN_URL = "http://127.0.0.1:8000/pay/alipay/return"
+# 是否是开发环境
+ALIPAY_DEBUG = True
+
+"""
+http://127.0.0.1:8000/pay/alipay/return?
+charset=utf-8&
+out_trade_no=1766369827924&
+method=alipay.trade.page.pay.return&
+total_amount=438.90&
+sign=QNBiko9vUMVH5POvoSXCAmsU5ITq6KG93XEyqaJmSnMaSwkAk0NqAQjT%2FZIGtQ5wS8gGRCyClSr8UEpXVrhv7O8L9fqQxwjkfmWHLQtrd88DDwTSQWQuqIGBB8CcHpI%2F9BCKBZ4H6iVAaMQNZj4wjy%2BReQBfYh0qV2d9D8N%2FyKYYB2RC555VpVPgUMUkryoWbFHbyuudyHbaJY0q3oXzj6t4OnWcpVkhGRR4r%2B80a%2BXl8ISGIAQiYHP%2BhRc8jZCDuGUvG2e5dfT5XHfrb1hVM69T1zw0U4eBZ4QuDzcOHRvsxJ4qyd4b5%2FaYy87TMR75NasOgfslJRHhypSBMl77ag%3D%3D&
+trade_no=2025122322001480340510104871&
+auth_app_id=9021000158671301&
+version=1.0&
+app_id=9021000158671301&
+sign_type=RSA2&
+seller_id=2088721090980334&
+timestamp=2025-12-23+16%3A26%3A43
+"""

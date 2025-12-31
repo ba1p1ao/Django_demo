@@ -9,6 +9,7 @@ class UserAddress(models.Model):
     signer_address = models.CharField(max_length=255, blank=True, null=True)
     district = models.CharField(max_length=255, blank=True, null=True)
     default = models.IntegerField(blank=True, null=True)
+    create_time = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         db_table = 'user_address'
