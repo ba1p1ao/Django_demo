@@ -26,11 +26,23 @@
           </el-menu-item>
         </template>
 
+        <!-- 管理员专属菜单 -->
+        <template v-if="isAdmin">
+          <el-menu-item index="/users">
+            <el-icon><UserFilled /></el-icon>
+            <span>用户管理</span>
+          </el-menu-item>
+        </template>
+
         <!-- 学生菜单 -->
         <template v-if="isStudent">
           <el-menu-item index="/exam-list">
             <el-icon><Edit /></el-icon>
             <span>参加考试</span>
+          </el-menu-item>
+          <el-menu-item index="/mistake-book">
+            <el-icon><Collection /></el-icon>
+            <span>错题本</span>
           </el-menu-item>
         </template>
 
@@ -38,6 +50,10 @@
         <el-menu-item index="/records">
           <el-icon><List /></el-icon>
           <span>考试记录</span>
+        </el-menu-item>
+        <el-menu-item index="/ranking">
+          <el-icon><Trophy /></el-icon>
+          <span>成绩排名</span>
         </el-menu-item>
         <el-menu-item index="/profile">
           <el-icon><User /></el-icon>
@@ -92,6 +108,7 @@ const currentTitle = computed(() => route.meta.title || '首页')
 
 const isStudent = computed(() => userStore.userInfo?.role === 'student')
 const isTeacherOrAdmin = computed(() => ['teacher', 'admin'].includes(userStore.userInfo?.role))
+const isAdmin = computed(() => userStore.userInfo?.role === 'admin')
 
 const handleCommand = async (command) => {
   if (command === 'logout') {

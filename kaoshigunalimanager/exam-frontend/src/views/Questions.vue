@@ -4,10 +4,20 @@
       <template #header>
         <div class="card-header">
           <span>题库管理</span>
-          <el-button type="primary" @click="handleAdd">
-            <el-icon><Plus /></el-icon>
-            添加题目
-          </el-button>
+          <div class="header-actions">
+            <el-button type="success" @click="handleExport">
+              <el-icon><Download /></el-icon>
+              导出题目
+            </el-button>
+            <el-button type="primary" @click="handleAdd">
+              <el-icon><Plus /></el-icon>
+              添加题目
+            </el-button>
+            <el-button type="warning" @click="importDialogVisible = true">
+              <el-icon><Upload /></el-icon>
+              批量导入
+            </el-button>
+          </div>
         </div>
       </template>
 
@@ -102,6 +112,12 @@
         <el-button type="danger" @click="handleBatchDelete">批量删除</el-button>
       </div>
     </el-card>
+
+    <!-- 导入对话框 -->
+    <QuestionImportDialog 
+      v-model="importDialogVisible" 
+      @success="handleImportSuccess"
+    />
   </div>
 </template>
 
@@ -110,8 +126,11 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getQuestionList, deleteQuestion, batchDeleteQuestions } from '@/api/question'
+import { exportQuestions } from '@/api/import-export'
+import QuestionImportDialog from '@/components/QuestionImportDialog.vue'
 
 const router = useRouter()
+const importDialogVisible = ref(false)
 
 const loading = ref(false)
 const tableData = ref([])
@@ -203,6 +222,35 @@ const handleAdd = () => {
   router.push('/questions/add')
 }
 
+const handleExport = async () => {
+  if (selectedRows.value.length === 0) {
+    ElMessage.warning('请先选择要导出的题目')
+    return
+  }
+
+  try {
+    const ids = selectedRows.value.map(item => item.id)
+    const res = await exportQuestions({ ids })
+    const blob = new Blob([res], { 
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+    })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `题目导出_${new Date().getTime()}.xlsx`
+    link.click()
+    window.URL.revokeObjectURL(url)
+    ElMessage.success('导出成功')
+  } catch (error) {
+    console.error(error)
+    ElMessage.error('导出失败')
+  }
+}
+
+const handleImportSuccess = () => {
+  loadData()
+}
+
 const handleEdit = (row) => {
   router.push(`/questions/edit/${row.id}`)
 }
@@ -270,6 +318,11 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
 }
 
 .search-form {

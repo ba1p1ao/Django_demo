@@ -92,6 +92,24 @@ const routes = [
         name: 'Profile',
         component: () => import('@/views/Profile.vue'),
         meta: { title: '个人中心' }
+      },
+      {
+        path: '/users',
+        name: 'Users',
+        component: () => import('@/views/Users.vue'),
+        meta: { title: '用户管理', roles: ['admin'] }
+      },
+      {
+        path: '/mistake-book',
+        name: 'MistakeBook',
+        component: () => import('@/views/MistakeBook.vue'),
+        meta: { title: '错题本', roles: ['student'] }
+      },
+      {
+        path: '/ranking',
+        name: 'Ranking',
+        component: () => import('@/views/Ranking.vue'),
+        meta: { title: '成绩排名' }
       }
     ]
   }
