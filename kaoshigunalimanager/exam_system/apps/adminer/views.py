@@ -53,6 +53,7 @@ class UserListView(APIView):
         
         return MyResponse.success(data=response_data)
 
+
 class UserStatisticsView(APIView):
     @check_permission
     def get(self, request):
@@ -108,6 +109,19 @@ class UserInfoView(APIView):
             return MyResponse.success(data=ser_user_data)
         except Exception as e:
             return MyResponse.failed(f"获取数据出错，{e}")
+    
+    
+    @check_permission
+    def delete(self, request, user_id):
+        payload = request.user
+        
+        if user_id == payload.get("id"):
+            return MyResponse.failed(message="不能删除自己")
+
+        delete_count = User.objects.filter(id=user_id).delete()
+        if not delete_count:
+            return MyResponse.failed("用户删除失败")
+        return MyResponse.success("用户删除成功")
         
         
 class UserUpdateStatusView(APIView):
@@ -116,11 +130,6 @@ class UserUpdateStatusView(APIView):
         payload = request.user
         if user_id == payload.get("id"):
             return MyResponse.failed(message="当前状态下不能修改自己的状态")
-        try:
-            user = User.objects.get(id=user_id)
-        except User.DoesNotExist:
-            return MyResponse.failed(message="用户信息不存在")
-        
         
         status = request.data.get("status", 0)
         
@@ -129,20 +138,20 @@ class UserUpdateStatusView(APIView):
             return MyResponse.failed(message="修改用户状态失败")
         return MyResponse.success("修改用户状态成功")
 
+
 class UserUpdateRoleView(APIView):
     @check_permission
     def put(self, request, user_id):
         payload = request.user
         if user_id == payload.get("id"):
             return MyResponse.failed(message="当前状态下不能修改自己的角色")
-        try:
-            user = User.objects.get(id=user_id)
-        except User.DoesNotExist:
-            return MyResponse.failed(message="用户信息不存在")
-        
+    
         role = request.data.get("role", 0)
         
         update_count = User.objects.filter(id=user_id).update(role=role)
         if not update_count:
             return MyResponse.failed(message="修改用户角色失败")
         return MyResponse.success("修改用户角色成功")
+    
+    
+    
