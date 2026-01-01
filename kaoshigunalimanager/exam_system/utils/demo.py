@@ -90,11 +90,65 @@
 # # print(s.replace("[", "").replace("]", "").replace('"', ""))
 
 
-a = {
-    "a": 1,
-    "b": 2
-}
+# import pandas as pd
 
-asdf = a.pop("a")
+# questions = [
+#     {'id': 52, 
+#      'type': 'single', 
+#      'category': '数学', 
+#      'content': '123', 
+#      'options': {'A': '123', 'B': '123', 'C': '123', 'D': '123'}, 
+#      'answer': 'A', 
+#      'analysis': '123', 
+#      'difficulty': 'medium', 
+#      'score': 5
+#      }, 
+#     {'id': 57, 'type': 'single', 'category': '数学', 'content': '100+100等于多少？', 'options': {'A': 100.0, 'B': 200.0, 'C': 300.0, 'D': 400.0}, 'answer': 'B', 'analysis': '100+100=200', 'difficulty': 'easy', 'score': 5}, {'id': 59, 'type': 'judge', 'category': '常识', 'content': '地球是圆的', 'options': {'A': '正确', 'B': '错误'}, 'answer': 'true', 'analysis': '地球是圆的', 'difficulty': 'easy', 'score': 5}, {'id': 60, 'type': 'fill', 'category': '语文', 'content': '床前明月光，疑是____霜', 'options': None, 'answer': '地上', 'analysis': '李白《静夜思》', 'difficulty': 'easy', 'score': 5}]
+# frame = {
+#     "题目类型": [],  
+#     "题目分类": [],
+#     "题目内容": [],
+#     "选项A": [],
+#     "选项B": [],
+#     "选项C": [],
+#     "选项D": [],
+#     "正确答案": [],
+#     "题目解析": [],
+#     "难度": [],
+#     "分值": [],
+# }
 
-print(a, asdf)
+# for question in questions:
+#     frame['题目类型'].append(question["type"])
+#     frame['题目分类'].append(question["category"])
+#     frame['题目内容'].append(question["content"])
+
+#     if question.get("options") and question["type"] != 'judge':
+#             frame['选项A'].append(question.get("options").get("A"))
+#             frame['选项B'].append(question.get("options").get("B"))
+#             frame['选项C'].append(question.get("options").get("C"))
+#             frame['选项D'].append(question.get("options").get("D"))
+            
+#     else:
+#         frame['选项A'].append(None)
+#         frame['选项B'].append(None)
+#         frame['选项C'].append(None)
+#         frame['选项D'].append(None)
+#     frame['正确答案'].append(question["answer"])
+#     frame['题目解析'].append(question["analysis"])
+#     frame['难度'].append(question["difficulty"])
+#     frame['分值'].append(question["score"])
+    
+# print(frame)
+# # 创建一个简单的 DataFrame
+# df = pd.DataFrame(frame)
+
+# # 将 DataFrame 写入 Excel 文件，写入 'Sheet1' 表单
+# df.to_excel('output.xlsx', sheet_name='Sheet1', index=False)
+
+# # # 写入多个表单，使用 ExcelWriter
+# # with pd.ExcelWriter('output.xlsx') as writer:
+# #     df.to_excel(writer, sheet_name='Sheet1', index=False)
+# #     df.to_excel(writer, sheet_name='Sheet2', index=False)
+
+

@@ -41,4 +41,4 @@ class QuestionListSerializers(serializers.ModelSerializer):
     # update_time = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", required=False, allow_null=True)
     class Meta:
         model = Question
-        fields = ["id", "type", "category", "content", "options", "score", "difficulty"]
+        fields = ["id", "type", "category", "content", "options", "answer", "analysis", "difficulty", "score"]

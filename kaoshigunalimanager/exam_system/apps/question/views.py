@@ -1,18 +1,54 @@
 import pandas as pd
+import io
 from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.generics import RetrieveAPIView, CreateAPIView, UpdateAPIView, DestroyAPIView
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.decorators import authentication_classes, permission_classes
 from rest_framework.exceptions import PermissionDenied
-from apps.question.serializers import QuestionSerializers, QuestionAddSerializers
+from django.http import FileResponse
+from urllib.parse import quote
+from apps.question.serializers import QuestionListSerializers, QuestionSerializers, QuestionAddSerializers
 from apps.question.models import Question
 from apps.user.models import User
 from utils.ResponseMessage import MyResponse, check_permission, check_auth
 from django.db import transaction
 
+# 题目类型映射常量
+QUESTION_TYPE_MAP = {
+    # 导入用
+    "单选题": "single",
+    "单选": "single",
+    "多选题": "multiple",
+    "多选": "multiple",
+    "判断题": "judge",
+    "判断": "judge",
+    "填空题": "fill",
+    "填空": "fill",
+    # 导出用
+    "single": "单选题",
+    "multiple": "多选题",
+    "judge": "判断题",
+    "fill": "填空题",
+}
+
+# 难度映射常量
+DIFFICULTY_MAP = {
+    # 导入用
+    "easy": "easy",
+    "简单": "easy",
+    "medium": "medium",
+    "中等": "medium",
+    "hard": "hard",
+    "困难": "hard",
+    # 导出用
+    "easy": "简单",
+    "medium": "中等",
+    "hard": "困难",
+}
+
 class QuestionListView(APIView):
-    # /api/question/list/?page=1&size=10&type=&category=&difficulty= HTTP/1.1" 200 16850
+
     def get(self, request):
         payload = request.user
         if not payload:
@@ -148,19 +184,18 @@ class QuestionImportView(APIView):
     @check_permission
     def post(self, request):
         payload = request.user
-        
+
         question_file = request.FILES.get("file")
         if not question_file:
             return MyResponse.failed("只能上传 .xlsx/.xls 文件，且不超过 10MB ")
-        
+
         file_name = question_file.name.lower()
         if not ((file_name.endswith(".xlsx") or  file_name.endswith(".xls")) and question_file.size <= 10 * 1024 * 1024):
             return MyResponse.failed("只能上传 .xlsx/.xls 文件，且不超过 10MB ")
-        
+
         df = pd.read_excel(question_file)
-        questions: list[dict] = self.process_import_data(df)
-        
-        print(questions)
+        questions = self.process_import_data(df)
+
         current_user = User.objects.get(id=payload.get("id"))
         response_data = {
             "total": len(questions),
@@ -172,58 +207,44 @@ class QuestionImportView(APIView):
             success_count = 0
             failed_count = 0
             failed_list = []
+            valid_questions = []
+
             with transaction.atomic():
                 for question in questions:
                     question["creator"] = current_user
                     question_index = question.pop("index")
-                    create_count = Question.objects.create(**question)
-                    if not create_count:
+
+                    # 验证必填字段
+                    if not all([question.get("type"), question.get("content"), question.get("answer")]):
                         failed_count += 1
                         failed_list.append({
                             "row": question_index,
-                            "reason": f'{question.get("content")} 格式存在错误'
+                            "reason": f'{question.get("content", "未知")} 缺少必填字段'
                         })
-                        # return MyResponse.failed(message=f'{question.get("content")} 格式存在错误')
-                    else:
-                        success_count += 1
-                
+                        continue
+
+                    valid_questions.append(Question(**question))
+                    success_count += 1
+
+                # 批量创建题目
+                if valid_questions:
+                    Question.objects.bulk_create(valid_questions)
+
                 response_data["success"] = success_count
                 response_data["failed"] = failed_count
                 response_data["failed_list"] = failed_list
-                return MyResponse.success(message="题目导入成功", data=response_data) 
+                return MyResponse.success(message="题目导入成功", data=response_data)
         except Exception as e:
             return MyResponse.failed(f"题目导入失败，{e}")
         
     
     def process_import_data(self, df):
-        # 题目类型
-        TYPE = {
-            "单选题": "single",
-            "单选": "single",
-            "多选题": "multiple",
-            "多选": "multiple",
-            "判断题": "judge",
-            "判断": "judge",    
-            "填空题": "fill",
-            "填空": "fill",
-        }
-
-        # 难度
-        DIFFICULTY = {
-            "easy": "easy",
-            "简单": "easy",
-            "medium": "medium",
-            "中等": "medium",     
-            "hard": "hard",
-            "困难": "hard",
-        }
-            
         questions = []
         try:
             for index, row in df.iterrows():
                 question = {}
                 question["index"] = index
-                question["type"] = TYPE.get(row["题目类型"])
+                question["type"] = QUESTION_TYPE_MAP.get(row["题目类型"])
                 question["category"] = row["题目分类"]
                 question["content"] = row["题目内容"]
                 question["options"] = None
@@ -232,14 +253,87 @@ class QuestionImportView(APIView):
                 elif question["type"] == "judge":
                     question["options"] = {"A": "正确", "B": "错误"}
                 else:
-                    question["options"] = {"A": row["选项A"], "B": row["选项B"], "C": row["选项C"], "D": row["选项D"]}                
+                    question["options"] = {"A": row["选项A"], "B": row["选项B"], "C": row["选项C"], "D": row["选项D"]}
                 question["answer"] = row["正确答案"]
                 question["analysis"] = row["题目解析"]
-                question["difficulty"] = DIFFICULTY.get(row["难度"])
+                question["difficulty"] = DIFFICULTY_MAP.get(row["难度"])
                 question["score"] = row["分值"]
-                
+
                 questions.append(question)
-            
+
             return questions
         except Exception as e:
             return MyResponse.failed(message="格式存在错误，请下载导入模板，按模板的格式填写")
+
+
+class QuestionExportView(APIView):
+    @check_permission
+    def post(self, request):
+        ids = request.data.get("ids")
+        questions = Question.objects.filter(id__in=ids)
+        if not questions:
+            return MyResponse.failed(message="请选择要导出的题目")
+        ser_question_data = QuestionListSerializers(instance=questions, many=True).data
+
+        # 使用内存流生成文件
+        excel_buffer = self.export_to_excel(ser_question_data)
+
+        # 返回文件供前端下载
+        filename = f"题目导出_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        encoded_filename = quote(filename)
+
+        response = FileResponse(
+            excel_buffer,
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = f'attachment; filename*=UTF-8\'\'{encoded_filename}'
+        return response
+    
+    
+    
+    def export_to_excel(self, questions):
+        frame = {
+            "题目类型": [],
+            "题目分类": [],
+            "题目内容": [],
+            "选项A": [],
+            "选项B": [],
+            "选项C": [],
+            "选项D": [],
+            "正确答案": [],
+            "题目解析": [],
+            "难度": [],
+            "分值": [],
+        }
+
+        for question in questions:
+            frame['题目类型'].append(QUESTION_TYPE_MAP.get(question["type"]))
+            frame['题目分类'].append(question["category"])
+            frame['题目内容'].append(question["content"])
+
+            if question.get("options") and question["type"] != 'judge':
+                    frame['选项A'].append(question.get("options").get("A"))
+                    frame['选项B'].append(question.get("options").get("B"))
+                    frame['选项C'].append(question.get("options").get("C"))
+                    frame['选项D'].append(question.get("options").get("D"))
+            else:
+                frame['选项A'].append(None)
+                frame['选项B'].append(None)
+                frame['选项C'].append(None)
+                frame['选项D'].append(None)
+            frame['正确答案'].append(question["answer"])
+            frame['题目解析'].append(question["analysis"])
+            frame['难度'].append(DIFFICULTY_MAP.get(question["difficulty"]))
+            frame['分值'].append(question["score"])
+
+        # 创建 DataFrame
+        df = pd.DataFrame(frame)
+
+        # 使用内存流代替临时文件
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='题目列表', index=False)
+
+        # 重置指针到开头
+        output.seek(0)
+        return output
