@@ -1,6 +1,6 @@
 <template>
   <el-dialog
-    v-model="dialogVisible"
+    v-model="visible"
     title="批量导入题目"
     width="600px"
     @close="handleClose"
@@ -14,12 +14,25 @@
         style="margin-bottom: 20px"
       >
         <template #default>
-          <ul>
-            <li>请先下载导入模板，按照模板格式填写题目信息</li>
-            <li>支持单选题、多选题、判断题、填空题四种题型</li>
-            <li>文件格式支持：.xlsx、.xls</li>
-            <li>文件大小限制：10MB</li>
-          </ul>
+          <div style="line-height: 1.8;">
+            <p><strong>步骤：</strong></p>
+            <ol style="margin-left: 20px;">
+              <li>点击下方"下载导入模板"按钮</li>
+              <li>按照模板格式填写题目信息（可参考示例数据）</li>
+              <li>保存为 .xlsx 或 .xls 格式</li>
+              <li>拖拽或点击上传文件</li>
+            </ol>
+            <p style="margin-top: 10px;"><strong>注意事项：</strong></p>
+            <ul style="margin-left: 20px;">
+              <li>题目类型：单选题、多选题、判断题、填空题</li>
+              <li>难度：easy（简单）、medium（中等）、hard（困难）</li>
+              <li>单选题答案填写选项字母（如：A、B、C、D）</li>
+              <li>多选题答案用逗号分隔（如：A,B,D）</li>
+              <li>判断题答案填写：true 或 false</li>
+              <li>填空题答案直接填写内容</li>
+              <li>文件大小限制：10MB</li>
+            </ul>
+          </div>
         </template>
       </el-alert>
 
@@ -82,7 +95,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Download, UploadFilled } from '@element-plus/icons-vue'
 import { downloadImportTemplate, importQuestions } from '@/api/import-export'
@@ -96,7 +109,11 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'success'])
 
-const dialogVisible = ref(props.modelValue)
+const visible = computed({
+  get: () => props.modelValue,
+  set: (val) => emit('update:modelValue', val)
+})
+
 const uploadRef = ref(null)
 const importing = ref(false)
 const importResult = ref(null)
@@ -157,7 +174,7 @@ const handleImport = async () => {
 }
 
 const handleClose = () => {
-  dialogVisible.value = false
+  visible.value = false
   importResult.value = null
   selectedFile.value = null
   if (uploadRef.value) {

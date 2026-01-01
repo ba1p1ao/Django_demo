@@ -104,7 +104,7 @@
               <div class="mistake-header">
                 <el-tag :type="getTypeColor(item.type)">{{ getTypeText(item.type) }}</el-tag>
                 <span class="mistake-category">{{ item.category }}</span>
-                <el-tag type="danger">错误{{ item.mistake_count }}次</span>
+                <el-tag type="danger">错误{{ item.mistake_count }}次</el-tag>
                 <span class="mistake-time">{{ item.last_mistake_time }}</span>
               </div>
               <div class="mistake-content">

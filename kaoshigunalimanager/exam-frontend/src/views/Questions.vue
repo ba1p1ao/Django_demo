@@ -13,7 +13,7 @@
               <el-icon><Plus /></el-icon>
               添加题目
             </el-button>
-            <el-button type="warning" @click="importDialogVisible = true">
+            <el-button type="warning" @click="handleImport">
               <el-icon><Upload /></el-icon>
               批量导入
             </el-button>
@@ -125,6 +125,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Plus, Download, Upload } from '@element-plus/icons-vue'
 import { getQuestionList, deleteQuestion, batchDeleteQuestions } from '@/api/question'
 import { exportQuestions } from '@/api/import-export'
 import QuestionImportDialog from '@/components/QuestionImportDialog.vue'
@@ -220,6 +221,12 @@ const handleReset = () => {
 
 const handleAdd = () => {
   router.push('/questions/add')
+}
+
+const handleImport = () => {
+  console.log('点击批量导入按钮')
+  importDialogVisible.value = true
+  console.log('importDialogVisible:', importDialogVisible.value)
 }
 
 const handleExport = async () => {
