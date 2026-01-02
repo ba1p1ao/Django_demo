@@ -37,29 +37,45 @@
         </div>
         
         <div v-else>
-          <!-- 我的排名 -->
-          <div class="my-ranking-card">
+          <!-- 我的排名（仅学生显示） -->
+          <div v-if="userInfo.role === 'student'" class="my-ranking-card">
             <div class="ranking-badge">
               <el-icon :size="40" :color="getRankingColor(rankingData.my_rank)">
                 <Medal />
               </el-icon>
             </div>
             <div class="ranking-info">
-              <div class="rank-number">第 {{ rankingData.my_rank }} 名</div>
-              <div class="rank-score">{{ rankingData.my_score }} 分</div>
+              <div class="rank-number">第 {{ rankingData.my_rank || '-' }} 名</div>
+              <div class="rank-score">{{ rankingData.my_score || '-' }} 分</div>
               <div class="rank-detail">
                 共 {{ rankingData.total_participants }} 人参加
+              </div>
+            </div>
+          </div>
+
+          <!-- 考试统计（教师/管理员显示） -->
+          <div v-else class="my-ranking-card">
+            <div class="ranking-badge">
+              <el-icon :size="40" color="#fff">
+                <Medal />
+              </el-icon>
+            </div>
+            <div class="ranking-info">
+              <div class="rank-number">考试统计</div>
+              <div class="rank-score">{{ rankingData.total_participants }} 人</div>
+              <div class="rank-detail">
+                参加本次考试
               </div>
             </div>
           </div>
           
           <!-- 排名列表 -->
           <div class="ranking-list">
-            <div 
-              v-for="(item, index) in rankingData.list" 
+            <div
+              v-for="(item, index) in rankingData.list"
               :key="item.user_id"
               class="ranking-item"
-              :class="{ 'my-rank': item.user_id === currentUserId }"
+              :class="{ 'my-rank': userInfo.role === 'student' && item.user_id === currentUserId }"
             >
               <div class="rank-number" :class="`rank-${index + 1}`">
                 {{ index + 1 }}
@@ -100,7 +116,7 @@
       <!-- 成绩趋势视图 -->
       <div v-else>
         <el-form :inline="true" class="search-form">
-          <el-form-item label="统计天数">
+          <el-form-item label="统计天数" style="width: 180px;">
             <el-select v-model="trendDays" placeholder="请选择" @change="loadTrendData">
               <el-option label="最近7天" :value="7" />
               <el-option label="最近15天" :value="15" />
@@ -142,9 +158,7 @@
         
         <div class="trend-chart">
           <div class="chart-title">成绩趋势图</div>
-          <div class="chart-placeholder">
-            <el-empty description="图表功能需要安装 ECharts 库" />
-          </div>
+          <ScoreTrendChart ref="trendChartRef" :days="trendDays" />
         </div>
         
         <div class="trend-list">
@@ -168,18 +182,22 @@
 
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
+import { Medal } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { getAvailableExamList } from '@/api/exam'
 import { getExamRanking } from '@/api/ranking'
 import { getStudentScoreTrend } from '@/api/ranking'
+import ScoreTrendChart from '@/components/ScoreTrendChart.vue'
 
 const userStore = useUserStore()
 const currentUserId = computed(() => userStore.userInfo?.id)
+const userInfo = computed(() => userStore.userInfo || {})
 
 const viewMode = ref('exam')
 const loading = ref(false)
 const examList = ref([])
 const trendDays = ref(30)
+const trendChartRef = ref(null)
 
 const searchForm = reactive({
   exam_id: null
@@ -248,6 +266,16 @@ const loadTrendData = async () => {
   try {
     const res = await getStudentScoreTrend({ days: trendDays.value })
     trendData.value = res.data
+    // 按时间由近到远排序
+    if (trendData.value.trend && trendData.value.trend.length > 0) {
+      trendData.value.trend.sort((a, b) => {
+        return new Date(b.date) - new Date(a.date)
+      })
+    }
+    // 刷新图表
+    if (trendChartRef.value) {
+      trendChartRef.value.refresh()
+    }
   } catch (error) {
     console.error(error)
   }
@@ -465,15 +493,6 @@ onMounted(() => {
   font-weight: bold;
   color: #303133;
   margin-bottom: 20px;
-}
-
-.chart-placeholder {
-  height: 400px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #F5F7FA;
-  border-radius: 8px;
 }
 
 .trend-list {

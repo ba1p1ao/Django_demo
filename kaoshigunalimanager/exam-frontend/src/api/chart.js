@@ -23,3 +23,12 @@ export const getStudentScoreComparisonChart = () => {
     method: 'get'
   })
 }
+
+// 获取学生成绩趋势图数据
+export const getScoreTrendChart = (days) => {
+  return request({
+    url: '/student/score/trend/',
+    method: 'get',
+    params: { days }
+  })
+}
