@@ -10,7 +10,6 @@ urlpatterns = [
     path("<int:id>/", views.QuestionInfoView.as_view()),
     
     # 导入导出题目
-
     path("import/", views.QuestionImportView.as_view()),
     path("export/", views.QuestionExportView.as_view()),
 ]

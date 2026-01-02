@@ -275,20 +275,22 @@ class QuestionExportView(APIView):
             return MyResponse.failed(message="请选择要导出的题目")
         ser_question_data = QuestionListSerializers(instance=questions, many=True).data
 
-        # 使用内存流生成文件
-        excel_buffer = self.export_to_excel(ser_question_data)
+        try:
+            # 使用内存流生成文件
+            excel_buffer = self.export_to_excel(ser_question_data)
+            
+            # 返回文件供前端下载
+            filename = f"题目导出_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+            encoded_filename = quote(filename)
 
-        # 返回文件供前端下载
-        filename = f"题目导出_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-        encoded_filename = quote(filename)
-
-        response = FileResponse(
-            excel_buffer,
-            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        )
-        response['Content-Disposition'] = f'attachment; filename*=UTF-8\'\'{encoded_filename}'
-        return response
-    
+            response = FileResponse(
+                excel_buffer,
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+            response['Content-Disposition'] = f'attachment; filename*=UTF-8\'\'{encoded_filename}'
+            return response
+        except Exception as e:
+            return MyResponse.filed(f"到处文件是发生错误，{e}")
     
     
     def export_to_excel(self, questions):
@@ -312,15 +314,16 @@ class QuestionExportView(APIView):
             frame['题目内容'].append(question["content"])
 
             if question.get("options") and question["type"] != 'judge':
-                    frame['选项A'].append(question.get("options").get("A"))
-                    frame['选项B'].append(question.get("options").get("B"))
-                    frame['选项C'].append(question.get("options").get("C"))
-                    frame['选项D'].append(question.get("options").get("D"))
+                frame['选项A'].append(question.get("options").get("A"))
+                frame['选项B'].append(question.get("options").get("B"))
+                frame['选项C'].append(question.get("options").get("C"))
+                frame['选项D'].append(question.get("options").get("D"))
             else:
                 frame['选项A'].append(None)
                 frame['选项B'].append(None)
                 frame['选项C'].append(None)
                 frame['选项D'].append(None)
+                
             frame['正确答案'].append(question["answer"])
             frame['题目解析'].append(question["analysis"])
             frame['难度'].append(DIFFICULTY_MAP.get(question["difficulty"]))
