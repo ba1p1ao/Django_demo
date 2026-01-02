@@ -315,19 +315,23 @@ class ExamAvailableView(generics.ListAPIView):
     serializer_class = ExamSerializer
     @check_auth
     def list(self, request, *args, **kwargs):
+        payload = request.user
         exam_list = self.get_queryset().filter(status="published")
         if not exam_list:
             return MyResponse.success("没有考试内容")
 
         # 判断试卷的时间是否结束
         valid_exam_list = []
-        current_time = timezone.localtime()
-        for exam in exam_list:
-            if exam.end_time > current_time:
-                valid_exam_list.append(exam)
-
+        # 前端做了限制，所以后端直接返回全部数据即可
+        # 判断用户是否为管理员如果是则返回所有试卷，如果是学生则返回有效的试卷
+        # if payload.get("role") not in ["teacher", "admin"]:
+        #     current_time = timezone.localtime()
+        #     for exam in exam_list:
+        #         if exam.end_time > current_time:
+        #             valid_exam_list.append(exam)
+        # else:
+        valid_exam_list = exam_list
         exam_ser_data = self.get_serializer(instance=valid_exam_list, many=True).data
-
         return MyResponse.success(data=exam_ser_data)
               
 
