@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "apps.exam",
     "apps.adminer",
     "apps.student",
+    "apps.classes",
 ]
 
 # 允许所有域名跨域 cors_origin_allow_all = true
