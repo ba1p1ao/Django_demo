@@ -56,6 +56,18 @@
                     <span class="form-tip">开启后学生可以重复参加该考试</span>
                 </el-form-item>
 
+                <el-form-item label="指定班级">
+                    <el-select v-model="form.class_ids" multiple placeholder="请选择班级（不选则所有班级可见）" style="width: 100%" filterable>
+                        <el-option
+                            v-for="cls in classList"
+                            :key="cls.id"
+                            :label="cls.name"
+                            :value="cls.id"
+                        />
+                    </el-select>
+                    <span class="form-tip">不选择班级时，所有学生都可以看到此考试</span>
+                </el-form-item>
+
                 <el-divider content-position="left">题目选择</el-divider>
 
                 <el-form-item label="选择题目" prop="question_ids">
@@ -253,6 +265,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search, Refresh } from '@element-plus/icons-vue'
 import { getExamDetail, addExam, updateExam } from '@/api/exam'
+import { getClassOptions } from '@/api/class'
 import { getQuestionList } from '@/api/question'
 
 const router = useRouter()
@@ -276,6 +289,7 @@ const form = reactive({
     end_time: '',
     is_random: 0,
     allow_retake: 0,
+    class_ids: [],
     question_ids: []
 })
 
@@ -341,6 +355,7 @@ const rules = {
 }
 
 const selectedQuestions = ref([])
+const classList = ref([])
 const tempSelectedQuestions = ref([])
 const selectedRowKeys = ref([])
 const selectAllSelected = ref(false)
@@ -466,6 +481,16 @@ const getRowKey = (row) => {
 
 const isQuestionSelected = (id) => {
     return selectedQuestions.value.some(q => q.id === id)
+}
+
+// 加载班级列表
+const loadClassList = async () => {
+  try {
+    const res = await getClassOptions()
+    classList.value = res.data || []
+  } catch (error) {
+    console.error(error)
+  }
 }
 
 // 加载题目列表
@@ -820,6 +845,7 @@ const loadDetail = async () => {
 }
 
 onMounted(() => {
+    loadClassList()
     if (isEdit.value) {
         loadDetail()
 

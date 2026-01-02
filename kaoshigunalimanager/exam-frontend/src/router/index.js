@@ -110,6 +110,12 @@ const routes = [
         name: 'Ranking',
         component: () => import('@/views/Ranking.vue'),
         meta: { title: '成绩排名' }
+      },
+      {
+        path: '/class-management',
+        name: 'ClassManagement',
+        component: () => import('@/views/ClassManagement.vue'),
+        meta: { title: '班级管理', roles: ['admin', 'teacher'] }
       }
     ]
   }

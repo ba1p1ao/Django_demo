@@ -24,6 +24,10 @@
             <el-icon><Notebook /></el-icon>
             <span>试卷管理</span>
           </el-menu-item>
+          <el-menu-item index="/class-management">
+            <el-icon><School /></el-icon>
+            <span>班级管理</span>
+          </el-menu-item>
         </template>
 
         <!-- 管理员专属菜单 -->

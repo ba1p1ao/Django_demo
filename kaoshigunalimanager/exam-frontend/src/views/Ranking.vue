@@ -15,10 +15,10 @@
       <div v-if="viewMode === 'exam'">
         <el-form :inline="true" :model="searchForm" class="search-form">
           <el-form-item label="选择考试">
-            <el-select 
-              v-model="searchForm.exam_id" 
-              placeholder="请选择考试" 
-              filterable 
+            <el-select
+              v-model="searchForm.exam_id"
+              placeholder="请选择考试"
+              filterable
               style="width: 250px"
               @change="handleExamChange"
             >
@@ -27,6 +27,23 @@
                 :key="exam.id"
                 :label="exam.title"
                 :value="exam.id"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="选择班级" v-if="userInfo.role !== 'student'">
+            <el-select
+              v-model="searchForm.class_id"
+              placeholder="请选择班级"
+              clearable
+              filterable
+              style="width: 200px"
+              @change="handleClassChange"
+            >
+              <el-option
+                v-for="cls in classList"
+                :key="cls.id"
+                :label="cls.name"
+                :value="cls.id"
               />
             </el-select>
           </el-form-item>
@@ -187,6 +204,7 @@ import { useUserStore } from '@/stores/user'
 import { getAvailableExamList } from '@/api/exam'
 import { getExamRanking } from '@/api/ranking'
 import { getStudentScoreTrend } from '@/api/ranking'
+import { getClassOptions } from '@/api/class'
 import ScoreTrendChart from '@/components/ScoreTrendChart.vue'
 
 const userStore = useUserStore()
@@ -196,11 +214,13 @@ const userInfo = computed(() => userStore.userInfo || {})
 const viewMode = ref('exam')
 const loading = ref(false)
 const examList = ref([])
+const classList = ref([])
 const trendDays = ref(30)
 const trendChartRef = ref(null)
 
 const searchForm = reactive({
-  exam_id: null
+  exam_id: null,
+  class_id: null
 })
 
 const rankingData = ref({
@@ -286,6 +306,20 @@ const handleExamChange = () => {
   loadRankingData()
 }
 
+const handleClassChange = () => {
+  pagination.page = 1
+  loadRankingData()
+}
+
+const loadClassList = async () => {
+  try {
+    const res = await getClassOptions()
+    classList.value = res.data || []
+  } catch (error) {
+    console.error(error)
+  }
+}
+
 const handleSizeChange = (val) => {
   pagination.size = val
   loadRankingData()
@@ -298,6 +332,7 @@ const handleCurrentChange = (val) => {
 
 onMounted(() => {
   loadExamList()
+  loadClassList()
   loadTrendData()
 })
 </script>

@@ -28,6 +28,16 @@
             <el-option label="管理员" value="admin" />
           </el-select>
         </el-form-item>
+        <el-form-item label="班级">
+          <el-select v-model="searchForm.class_id" placeholder="请选择班级" clearable style="width: 150px" filterable>
+            <el-option
+              v-for="cls in classList"
+              :key="cls.id"
+              :label="cls.name"
+              :value="cls.id"
+            />
+          </el-select>
+        </el-form-item>
         <el-form-item label="状态">
           <el-select v-model="searchForm.status" placeholder="请选择" clearable style="width: 120px">
             <el-option label="正常" :value="1" />
@@ -48,6 +58,12 @@
         <el-table-column prop="role" label="角色" width="100">
           <template #default="{ row }">
             <el-tag :type="getRoleColor(row.role)">{{ getRoleText(row.role) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="class_name" label="班级" width="150">
+          <template #default="{ row }">
+            <el-tag v-if="row.class_name" type="info">{{ row.class_name }}</el-tag>
+            <span v-else style="color: #909399">-</span>
           </template>
         </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
@@ -128,9 +144,11 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getUserList, getUserDetail, updateUserStatus, updateUserRole, deleteUser, getUserStatistics } from '@/api/admin'
+import { getClassOptions } from '@/api/class'
 
 const loading = ref(false)
 const tableData = ref([])
+const classList = ref([])
 const statistics = ref({
   total_users: 0,
   student_count: 0,
@@ -146,6 +164,7 @@ const searchForm = reactive({
   username: '',
   nickname: '',
   role: '',
+  class_id: '',
   status: ''
 })
 
@@ -209,8 +228,18 @@ const handleReset = () => {
   searchForm.username = ''
   searchForm.nickname = ''
   searchForm.role = ''
+  searchForm.class_id = ''
   searchForm.status = ''
   handleSearch()
+}
+
+const loadClassList = async () => {
+  try {
+    const res = await getClassOptions()
+    classList.value = res.data || []
+  } catch (error) {
+    console.error(error)
+  }
 }
 
 const handleViewDetail = async (row) => {
@@ -298,6 +327,7 @@ const handleCurrentChange = (val) => {
 onMounted(() => {
   loadData()
   loadStatistics()
+  loadClassList()
 })
 </script>
 
