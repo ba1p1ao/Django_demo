@@ -30,4 +30,7 @@ urlpatterns = [
 
     # 统计数据
     path("statistics/", views.SystemStatisticsView.as_view()),
+
+    # 考试排名
+    path("<int:exam_id>/ranking/", views.ExamRankingView.as_view()),
 ]

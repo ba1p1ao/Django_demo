@@ -844,4 +844,67 @@ class SystemStatisticsView(APIView):
         }
 
         return MyResponse.success(data=response_data)
+
+
+class ExamRankingView(APIView):
+    @check_auth
+    def get(self, request, exam_id):
+        payload = request.user
+        
+        page = int(request.GET.get("page"))
+        page_size = int(request.GET.get("size"))
+        offset = (page - 1) * page_size
+        # 获取当前试卷
+        try:
+            exam = Exam.objects.get(id=exam_id)
+        except Exam.DoesNotExist:
+            return MyResponse.failed(message="试卷不存在")
+        
+        response_data = {
+            "exam_id": exam_id,
+            "exam_title": exam.title,
+            "list": []
+        }
+
+        # exam_record = exam_record.annotate(
+        #     max_score=Max("score"),
+        # ).values("user_id", "max_score")
+        # print(exam_record)
+        user_score_list = User.objects.filter(role="student").values().annotate(
+            max_score=Max("examrecord__score", filter=Q(examrecord__exam_id=exam_id)),
+        ).values("id", "username", "nickname", "max_score").order_by("-max_score")
+                
+        response_data["total_participants"] = user_score_list.count()
+        # print(user_score_list)
+        try:
+            for index, user_score in enumerate(user_score_list, 1):
+                exam_record_best = ExamRecord.objects.filter(
+                    exam_id=exam_id, 
+                    user_id=user_score["id"],
+                    score=user_score["max_score"]
+                ).values("is_passed", "submit_time").first()
+                if not exam_record_best:
+                    continue
+                rank_list_dict = {}          
+                rank_list_dict["rank"] = index
+                rank_list_dict["user_id"] = user_score["id"]
+                rank_list_dict["username"] = user_score["username"]
+                rank_list_dict["nickname"] = user_score["nickname"]
+                rank_list_dict["score"] = user_score["max_score"]
+    
+                # 获取学生最高成绩的考试记录
+
+                rank_list_dict["is_passed"] = exam_record_best["is_passed"]
+                rank_list_dict["submit_time"] = exam_record_best["submit_time"].strftime("%Y-%m-%d %H:%M:%S")
+                if user_score["id"] == payload.get("id"):
+                    response_data["my_rank"] = index
+                    response_data["my_score"] = user_score["max_score"]
+                
+                response_data["list"].append(rank_list_dict)
+            # print(response_data)
+            response_data["list"][offset:offset+page_size]
+            return MyResponse.success(data=response_data)
+        except Exception as e:
+            return MyResponse.failed(message="排名信息获取失败")
+            
         
