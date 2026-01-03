@@ -55,11 +55,13 @@ class UserClass(models.Model):
     user = models.ForeignKey(
         User,  # 修改为你的User模型路径
         on_delete=models.CASCADE,
+        db_column='user_id',
         verbose_name='用户'
     )
     class_info = models.ForeignKey(
         Class,  # Class模型在同一app中，如果是其他app则用'app名.Class'
         on_delete=models.CASCADE,
+        db_column='class_id',
         verbose_name='班级'
     )
     join_time = models.DateTimeField(auto_now_add=True, verbose_name='加入时间')
