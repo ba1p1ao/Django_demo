@@ -19,38 +19,67 @@ class UserListView(APIView):
         | nickname | string | 否 | 昵称（模糊搜索） |
         | role | string | 否 | 角色：student/teacher/admin |
         | status | int | 否 | 状态：1正常 0禁用 |
+        | class_id | int | 否 | 班级ID |
         """
+        from apps.classes.models import UserClass, Class
+
         payload = request.user
         request_data = request.GET
         # 设置过滤参数
         filter_body = {}
+        class_id = None
         for k, v in request_data.items():
             if k in ["page", "size"]:
                 continue
+            elif k == "class_id" and v:
+                class_id = int(v)
             elif k in ["role", "status"] and v:
                 filter_body[f"{k}"] = v
             elif k in ["username", "nickname"] and v:
                 filter_body[f"{k}__icontains"] = v
-        
+
         page = int(request_data.get("page", 1))
         page_size = int(request_data.get("size", 10))
         offset = (page - 1) * page_size
-        
+
         users = User.objects.filter(**filter_body)
-        
+
+        # 如果有班级筛选，需要通过 UserClass 表来筛选
+        if class_id:
+            user_ids = UserClass.objects.filter(class_info_id=class_id).values_list('user_id', flat=True)
+            users = users.filter(id__in=user_ids)
+
         if not users:
-            return MyResponse.failed(message="用户信息为空")     
+            return MyResponse.failed(message="用户信息为空")
+
         total = users.count()
         page_list = users.order_by("-create_time")[offset:offset+page_size]
-        
+
         ser_data = UserSerializers(instance=page_list, many=True).data
+
+        # 为每个用户添加班级信息
+        for user_data in ser_data:
+            user_id = user_data["id"]
+            try:
+                # 获取用户的班级信息
+                user_class = UserClass.objects.filter(user_id=user_id).select_related('class_info').first()
+                if user_class and user_class.class_info:
+                    user_data["class_name"] = user_class.class_info.name
+                    user_data["class_id"] = user_class.class_info.id
+                else:
+                    user_data["class_name"] = None
+                    user_data["class_id"] = None
+            except Exception as e:
+                user_data["class_name"] = None
+                user_data["class_id"] = None
+
         response_data = {
             "list": ser_data,
             "total": total,
             "page": page,
             "size": page_size,
         }
-        
+
         return MyResponse.success(data=response_data)
 
 
