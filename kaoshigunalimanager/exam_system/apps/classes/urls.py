@@ -5,4 +5,6 @@ from apps.classes import views
 urlpatterns = [
     path("options/", views.ClassOptionView.as_view()),
     path("list/", views.ClassListView.as_view()),
+    path("create/", views.ClassCreateView.as_view()),
+    path("<int:class_id>/", views.ClassView.as_view()),
 ]
