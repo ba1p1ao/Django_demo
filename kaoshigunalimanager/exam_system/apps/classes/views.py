@@ -1,7 +1,7 @@
-from django.db.models import Count
+from django.db.models import Count, F
 from rest_framework.views import APIView
 from apps.classes.serializers import ClassListSerializer
-from apps.classes.models import Class
+from apps.classes.models import Class, UserClass
 from apps.user.models import User
 from utils.ResponseMessage import check_auth, check_permission, MyResponse
 
@@ -112,6 +112,38 @@ class ClassView(APIView):
             return MyResponse.failed(message="班级信息不存在")
 
 
-        return MyResponse.success(message="修改班级信息成功")
+        return MyResponse.success(message="修改成功")
+
+    @check_permission
+    def delete(self, request, class_id):
+        payload = request.user
+        try:
+            # 检查班级是否存在
+            class_obj = Class.objects.get(id=class_id)
+            # 删除班级，由于 UserClass 的 on_delete=CASCADE，会自动删除关联的学生班级记录
+            class_obj.delete()
+
+            return MyResponse.success(message="删除成功")
+        except Class.DoesNotExist:
+            return MyResponse.failed(message="班级信息不存在")
+        except Exception as e:
+            return MyResponse.failed(message=f"删除失败: {str(e)}")
 
 
+
+class ClassStatusView(APIView):
+    @check_permission
+    def put(self, request, class_id):
+        payload = request.user
+
+        # 获取班级信息
+        try:
+            class_obj = Class.objects.get(id=class_id)
+            new_status = 0 if class_obj.status == 1 else 1
+            update_class = Class.objects.filter(id=class_id).update(status=new_status)
+            if update_class == 0:
+                return MyResponse.failed(message="班级信息不存在")
+
+            return MyResponse.success(message="修改成功")
+        except Exception as e:
+            return MyResponse.failed(message="班级信息不存在")
