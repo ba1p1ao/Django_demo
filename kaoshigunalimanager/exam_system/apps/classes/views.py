@@ -357,6 +357,9 @@ class ClassMembersRemoveView(APIView):
         if len(user_ids) == 0:
             return MyResponse.failed(message="用户ID列表不能为空")
 
+        if payload.get("id") in user_ids:
+            return MyResponse.failed(message="不能删除自己的信息")
+
         users = User.objects.filter(id__in=user_ids)
         if not users:
             return MyResponse.failed(message="用户信息不存在")
