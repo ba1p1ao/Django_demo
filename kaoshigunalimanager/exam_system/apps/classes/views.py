@@ -1,3 +1,4 @@
+from django.core.signals import request_started
 from django.db.models import Count, F, Q, Avg, Max, Min, Case, When, FloatField
 from rest_framework.views import APIView
 from apps.classes.serializers import ClassListSerializer
@@ -283,4 +284,34 @@ class ClassMembersView(APIView):
             }
             response_data["list"].append(data)
 
+        return MyResponse.success(data=response_data)
+
+
+class ClassAvailableStudentsView(APIView):
+    @check_permission
+    def get(self, request, class_id):
+        payload = request.user
+
+        # 获取当前班级的学生信息
+        cur_class_students = UserClass.objects.filter(class_info=class_id, user__role="student")
+        if not cur_class_students:
+            return MyResponse.failed("当前班级学生信息获取失败")
+        # 获取当前班级的学生id
+        cur_class_student_ids = [s.user_id for s in cur_class_students]
+
+        # 获取所有学生信息
+        students = User.objects.filter(~Q(id__in=cur_class_student_ids), role="student")
+        if not students:
+            return MyResponse.failed("没有可用的学生信息")
+
+        response_data = []
+
+        for student in students:
+            response_data.append({
+                "id": student.id,
+                "username": student.username,
+                "nickname": student.nickname,
+                "role": student.role,
+                "status": student.status
+            })
         return MyResponse.success(data=response_data)
