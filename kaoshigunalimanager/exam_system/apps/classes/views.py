@@ -176,7 +176,7 @@ class ClassStatisticsView(APIView):
             }
         }
 
-        student_class_qs = UserClass.objects.filter(class_info=class_id)
+        student_class_qs = UserClass.objects.filter(class_info=class_id, user__role="student").select_related("user")
         response_data["student_count"] = student_class_qs.count()
 
         if response_data["student_count"] == 0:

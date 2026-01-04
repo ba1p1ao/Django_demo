@@ -865,12 +865,18 @@ class ExamRankingView(APIView):
             "exam_title": exam.title,
             "list": []
         }
+        class_id = request.GET.get("class_id")
+        cur_class_students = User.objects.filter(role="student")
+        print(cur_class_students)
+        if class_id:
+            cur_class_students = User.objects.filter(role="student", userclass__class_info_id=class_id)
 
+        print(cur_class_students)
         # exam_record = exam_record.annotate(
         #     max_score=Max("score"),
         # ).values("user_id", "max_score")
         # print(exam_record)
-        user_score_list = User.objects.filter(role="student").values().annotate(
+        user_score_list = cur_class_students.annotate(
             max_score=Max("examrecord__score", filter=Q(examrecord__exam_id=exam_id)),
         ).values("id", "username", "nickname", "max_score").order_by("-max_score")
                 
@@ -901,8 +907,8 @@ class ExamRankingView(APIView):
                     response_data["my_score"] = user_score["max_score"]
                 
                 response_data["list"].append(rank_list_dict)
-            # print(response_data)
-            response_data["list"][offset:offset+page_size]
+
+            response_data["list"] = response_data["list"][offset:offset + page_size]
             return MyResponse.success(data=response_data)
         except Exception as e:
             return MyResponse.failed(message="排名信息获取失败")
