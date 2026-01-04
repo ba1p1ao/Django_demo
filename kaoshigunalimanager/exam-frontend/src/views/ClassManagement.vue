@@ -169,6 +169,7 @@
 
     <!-- 班级成员管理对话框 -->
     <ClassMemberDialog
+      v-if="memberDialogVisible && currentClass.id"
       v-model="memberDialogVisible"
       :class-id="currentClass.id"
       :class-name="currentClass.name"
@@ -178,7 +179,8 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onActivated, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import {
@@ -186,13 +188,14 @@ import {
   createClass,
   updateClass,
   deleteClass,
-  updateClassStatus
+  updateClassStatus,
+  getTeacherClasses
 } from '@/api/class'
-import { getUserList } from '@/api/admin'
 import ClassMemberDialog from '@/components/ClassMemberDialog.vue'
 
 const userStore = useUserStore()
 const userInfo = computed(() => userStore.userInfo || {})
+const router = useRouter()
 
 const loading = ref(false)
 const submitLoading = ref(false)
@@ -233,16 +236,31 @@ const dialogTitle = computed(() => (form.id ? '编辑班级' : '创建班级'))
 const loadClassList = async () => {
   loading.value = true
   try {
-    const params = {
-      page: pagination.page,
-      size: pagination.size,
-      name: searchForm.name || undefined,
-      grade: searchForm.grade || undefined,
-      status: searchForm.status !== '' ? searchForm.status : undefined
+    // 如果是教师角色，使用教师班级查询接口
+    if (userInfo.value.role === 'teacher') {
+      const params = {
+        page: pagination.page,
+        size: pagination.size,
+        name: searchForm.name || undefined,
+        grade: searchForm.grade || undefined,
+        status: searchForm.status !== '' ? searchForm.status : undefined
+      }
+      const res = await getTeacherClasses(params)
+      classList.value = res.data.list || []
+      pagination.total = res.data.total || 0
+    } else {
+      // 管理员使用原有的班级列表接口
+      const params = {
+        page: pagination.page,
+        size: pagination.size,
+        name: searchForm.name || undefined,
+        grade: searchForm.grade || undefined,
+        status: searchForm.status !== '' ? searchForm.status : undefined
+      }
+      const res = await getClassList(params)
+      classList.value = res.data.list || []
+      pagination.total = res.data.total || 0
     }
-    const res = await getClassList(params)
-    classList.value = res.data.list || []
-    pagination.total = res.data.total || 0
   } catch (error) {
     console.error(error)
   } finally {
@@ -347,7 +365,9 @@ const handleDelete = async (row) => {
 
 const handleViewMembers = (row) => {
   currentClass.value = row
-  memberDialogVisible.value = true
+  nextTick(() => {
+    memberDialogVisible.value = true
+  })
 }
 
 const handleReset = () => {
@@ -364,8 +384,24 @@ const handleCloseDialog = () => {
 }
 
 onMounted(() => {
+  // 检查是否为教师或管理员
+  if (!['teacher', 'admin'].includes(userInfo.value.role)) {
+    ElMessage.error('您没有权限访问此页面')
+    router.push('/home')
+    return
+  }
+  
   loadClassList()
-  loadTeacherList()
+  if (userInfo.value.role === 'admin') {
+    loadTeacherList()
+  }
+})
+
+onActivated(() => {
+  loadClassList()
+  if (userInfo.value.role === 'admin') {
+    loadTeacherList()
+  }
 })
 </script>
 

@@ -11,7 +11,7 @@
         <div class="member-header">
           <el-form :inline="true" :model="searchForm">
             <el-form-item label="角色">
-              <el-select v-model="searchForm.role" @change="loadMembers">
+              <el-select v-model="searchForm.role" @change="loadMembers" style="width: 100px;">
                 <el-option label="全部" value="" />
                 <el-option label="学生" value="student" />
                 <el-option label="教师" value="teacher" />
@@ -108,6 +108,66 @@
               </el-col>
             </el-row>
           </div>
+
+          <!-- 班级考试排名 -->
+          <div class="class-exam-ranking">
+            <div class="section-title">班级考试排名</div>
+            <el-form :inline="true">
+              <el-form-item label="选择考试">
+                <el-select
+                  v-model="selectedExamId"
+                  placeholder="请选择考试"
+                  clearable
+                  style="width: 250px"
+                  @change="loadClassExamRanking"
+                >
+                  <el-option
+                    v-for="exam in examList"
+                    :key="exam.id"
+                    :label="exam.title"
+                    :value="exam.id"
+                  />
+                </el-select>
+              </el-form-item>
+            </el-form>
+            <el-table :data="classExamRanking" v-loading="rankingLoading" border>
+              <el-table-column type="index" label="排名" width="80" />
+              <el-table-column prop="username" label="用户名" width="120" />
+              <el-table-column prop="nickname" label="昵称" width="120" />
+              <el-table-column prop="score" label="得分" width="100">
+                <template #default="{ row }">
+                  <span :style="{ color: row.is_passed ? '#67C23A' : '#F56C6C', fontWeight: 'bold' }">
+                    {{ row.score }}
+                  </span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="is_passed" label="是否及格" width="100">
+                <template #default="{ row }">
+                  <el-tag :type="row.is_passed ? 'success' : 'danger'" size="small">
+                    {{ row.is_passed ? '及格' : '不及格' }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="submit_time" label="提交时间" width="180" />
+            </el-table>
+          </div>
+
+          <!-- 班级成绩趋势 -->
+          <div class="class-score-trend">
+            <div class="section-title">班级成绩趋势</div>
+            <el-form :inline="true">
+              <el-form-item label="统计天数">
+                <el-select v-model="trendDays" placeholder="请选择" @change="loadClassScoreTrend">
+                  <el-option label="最近7天" :value="7" />
+                  <el-option label="最近15天" :value="15" />
+                  <el-option label="最近30天" :value="30" />
+                  <el-option label="最近60天" :value="60" />
+                  <el-option label="最近90天" :value="90" />
+                </el-select>
+              </el-form-item>
+            </el-form>
+            <div ref="classTrendChartRef" style="height: 400px"></div>
+          </div>
         </div>
       </el-tab-pane>
     </el-tabs>
@@ -162,15 +222,19 @@
 </template>
 
 <script setup>
-import { ref, reactive, watch } from 'vue'
+import { ref, reactive, watch, computed, nextTick, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   getClassMembers,
   addClassMembers,
   removeClassMembers,
   getAvailableStudents,
-  getClassStatistics
+  getClassStatistics,
+  getClassExamRanking,
+  getClassScoreTrend
 } from '@/api/class'
+import { getAvailableExamList } from '@/api/exam'
+import * as echarts from 'echarts'
 
 const props = defineProps({
   modelValue: {
@@ -195,6 +259,8 @@ const loading = ref(false)
 const statisticsLoading = ref(false)
 const availableLoading = ref(false)
 const addLoading = ref(false)
+const rankingLoading = ref(false)
+const trendLoading = ref(false)
 
 const searchForm = reactive({
   role: ''
@@ -223,7 +289,15 @@ const searchKeyword = ref('')
 const availableStudents = ref([])
 const selectedStudents = ref([])
 
-const dialogTitle = computed(() => `班级成员管理 - ${props.className}`)
+// 班级考试排名相关
+const examList = ref([])
+const selectedExamId = ref(null)
+const classExamRanking = ref([])
+
+// 班级成绩趋势相关
+const trendDays = ref(30)
+const classTrendChartRef = ref(null)
+let classTrendChart = null
 
 const loadMembers = async () => {
   loading.value = true
@@ -253,6 +327,123 @@ const loadStatistics = async () => {
   } finally {
     statisticsLoading.value = false
   }
+}
+
+const loadExamList = async () => {
+  try {
+    const res = await getAvailableExamList()
+    examList.value = res.data || []
+  } catch (error) {
+    console.error(error)
+  }
+}
+
+const loadClassExamRanking = async () => {
+  if (!selectedExamId.value) {
+    classExamRanking.value = []
+    return
+  }
+  
+  rankingLoading.value = true
+  try {
+    const res = await getClassExamRanking(props.classId, {
+      exam_id: selectedExamId.value,
+      page: 1,
+      size: 100
+    })
+    classExamRanking.value = res.data.list || []
+  } catch (error) {
+    console.error(error)
+    ElMessage.error('加载班级考试排名失败')
+  } finally {
+    rankingLoading.value = false
+  }
+}
+
+const loadClassScoreTrend = async () => {
+  trendLoading.value = true
+  try {
+    const res = await getClassScoreTrend(props.classId, {
+      days: trendDays.value
+    })
+    const data = res.data
+    renderClassTrendChart(data)
+  } catch (error) {
+    console.error(error)
+    ElMessage.error('加载班级成绩趋势失败')
+  } finally {
+    trendLoading.value = false
+  }
+}
+
+const renderClassTrendChart = (data) => {
+  if (!classTrendChartRef.value) return
+  
+  classTrendChart = echarts.init(classTrendChartRef.value)
+  
+  const option = {
+    title: {
+      text: '班级成绩趋势',
+      left: 'center'
+    },
+    tooltip: {
+      trigger: 'axis'
+    },
+    legend: {
+      data: ['平均分', '及格率'],
+      top: 30
+    },
+    xAxis: {
+      type: 'category',
+      data: data.trend?.map(t => t.date) || [],
+      axisLabel: {
+        rotate: 45
+      }
+    },
+    yAxis: [
+      {
+        type: 'value',
+        name: '分数',
+        min: 0,
+        max: 100,
+        position: 'left'
+      },
+      {
+        type: 'value',
+        name: '及格率',
+        min: 0,
+        max: 100,
+        position: 'right',
+        axisLabel: {
+          formatter: '{value}%'
+        }
+      }
+    ],
+    series: [
+      {
+        name: '平均分',
+        type: 'line',
+        yAxisIndex: 0,
+        data: data.trend?.map(t => t.average_score) || [],
+        smooth: true,
+        itemStyle: {
+          color: '#409EFF'
+        }
+      },
+      {
+        name: '及格率',
+        type: 'line',
+        yAxisIndex: 1,
+        data: data.trend?.map(t => (t.pass_rate * 100).toFixed(1)) || [],
+        smooth: true,
+        itemStyle: {
+          color: '#67C23A'
+        }
+      }
+    ]
+  }
+  
+  classTrendChart.setOption(option)
 }
 
 const loadAvailableStudents = async () => {
@@ -337,6 +528,7 @@ watch(
     if (val) {
       loadMembers()
       loadStatistics()
+      loadExamList()
     }
   },
   { immediate: true }
@@ -344,6 +536,12 @@ watch(
 
 watch(dialogVisible, (val) => {
   emit('update:modelValue', val)
+})
+
+onUnmounted(() => {
+  if (classTrendChart) {
+    classTrendChart.dispose()
+  }
 })
 </script>
 

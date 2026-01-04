@@ -38,6 +38,56 @@
         </el-descriptions>
       </div>
 
+      <!-- 数据可视化图表 -->
+      <div class="exam-charts-section" v-if="statistics && statistics.total_participants > 0">
+        <h3>数据可视化</h3>
+        <el-row :gutter="20">
+          <!-- 成绩分布图 -->
+          <el-col :span="12">
+            <el-card>
+              <template #header>
+                <span>成绩分布</span>
+              </template>
+              <div ref="scoreDistributionChartRef" style="height: 400px"></div>
+            </el-card>
+          </el-col>
+          <!-- 题目正确率图 -->
+          <el-col :span="12">
+            <el-card>
+              <template #header>
+                <span>题目正确率</span>
+              </template>
+              <div ref="questionCorrectnessChartRef" style="height: 400px"></div>
+            </el-card>
+          </el-col>
+        </el-row>
+      </div>
+
+      <!-- 考试分析报告 -->
+      <div class="exam-report-section" v-if="statistics && statistics.total_participants > 0">
+        <h3>考试分析报告</h3>
+        <el-row :gutter="20">
+          <el-col :span="8">
+            <el-button type="primary" @click="handleGenerateReport" :loading="reportGenerating">
+              <el-icon><Document /></el-icon>
+              生成报告
+            </el-button>
+          </el-col>
+          <el-col :span="8">
+            <el-button type="success" @click="handleExportReport" :loading="reportExporting">
+              <el-icon><Download /></el-icon>
+              导出报告（PDF）
+            </el-button>
+          </el-col>
+          <el-col :span="8">
+            <el-button type="warning" @click="handleSendEmail" :loading="emailSending">
+              <el-icon><Message /></el-icon>
+              发送成绩单邮件
+            </el-button>
+          </el-col>
+        </el-row>
+      </div>
+
       <!-- 学生成绩列表 -->
       <div class="student-records-section">
         <h3>学生成绩列表</h3>
@@ -122,10 +172,14 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, nextTick, watch, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { ArrowLeft } from '@element-plus/icons-vue'
+import { ArrowLeft, Document, Download, Message } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { getExamDetail, getExamStatistics, getGroupedExamRecords } from '@/api/exam'
+import { getScoreDistributionChart, getQuestionCorrectnessChart } from '@/api/chart'
+import { generateExamReport, exportExamReport, sendScoreEmail } from '@/api/report'
+import * as echarts from 'echarts'
 
 const router = useRouter()
 const route = useRoute()
@@ -134,6 +188,13 @@ const loading = ref(false)
 const examInfo = ref({})
 const statistics = ref(null)
 const studentRecords = ref([])
+const scoreDistributionChartRef = ref(null)
+const questionCorrectnessChartRef = ref(null)
+const reportGenerating = ref(false)
+const reportExporting = ref(false)
+const emailSending = ref(false)
+let scoreDistributionChart = null
+let questionCorrectnessChart = null
 
 const searchForm = reactive({
   username: '',
@@ -273,10 +334,218 @@ const handleViewStudentRecord = (studentRecord) => {
   router.push(`/exam-record/${studentRecord.id}`)
 }
 
+const loadScoreDistributionChart = async () => {
+  const examId = route.params.id
+  try {
+    const res = await getScoreDistributionChart(examId)
+    const data = res.data
+    renderScoreDistributionChart(data)
+  } catch (error) {
+    console.error('加载成绩分布图失败:', error)
+  }
+}
+
+const loadQuestionCorrectnessChart = async () => {
+  const examId = route.params.id
+  try {
+    const res = await getQuestionCorrectnessChart(examId)
+    const data = res.data
+    renderQuestionCorrectnessChart(data)
+  } catch (error) {
+    console.error('加载题目正确率图失败:', error)
+  }
+}
+
+const renderScoreDistributionChart = (data) => {
+  if (!scoreDistributionChartRef.value) return
+  
+  scoreDistributionChart = echarts.init(scoreDistributionChartRef.value)
+  
+  const option = {
+    title: {
+      text: '成绩分布',
+      left: 'center'
+    },
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: {
+        type: 'shadow'
+      }
+    },
+    xAxis: {
+      type: 'category',
+      data: Object.keys(data.distribution || {}),
+      axisLabel: {
+        rotate: 45
+      }
+    },
+    yAxis: {
+      type: 'value',
+      name: '人数'
+    },
+    series: [
+      {
+        name: '人数',
+        type: 'bar',
+        data: Object.values(data.distribution || {}),
+        itemStyle: {
+          color: function(params) {
+            const colors = ['#5470C6', '#91CC75', '#FAC858', '#EE6666', '#73C0DE']
+            return colors[params.dataIndex % colors.length]
+          }
+        },
+        label: {
+          show: true,
+          position: 'top'
+        }
+      }
+    ]
+  }
+  
+  scoreDistributionChart.setOption(option)
+}
+
+const renderQuestionCorrectnessChart = (data) => {
+  if (!questionCorrectnessChartRef.value) return
+  
+  questionCorrectnessChart = echarts.init(questionCorrectnessChartRef.value)
+  
+  const option = {
+    title: {
+      text: '题目正确率',
+      left: 'center'
+    },
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: {
+        type: 'shadow'
+      }
+    },
+    xAxis: {
+      type: 'value',
+      name: '正确率',
+      max: 100,
+      axisLabel: {
+        formatter: '{value}%'
+      }
+    },
+    yAxis: {
+      type: 'category',
+      data: data.questions?.map(q => `题目${q.question_id}`) || [],
+      inverse: true
+    },
+    series: [
+      {
+        name: '正确率',
+        type: 'bar',
+        data: data.questions?.map(q => (q.correct_rate * 100).toFixed(1)) || [],
+        itemStyle: {
+          color: function(params) {
+            const value = params.value
+            if (value >= 80) return '#67C23A'
+            if (value >= 60) return '#E6A23C'
+            return '#F56C6C'
+          }
+        },
+        label: {
+          show: true,
+          position: 'right',
+          formatter: '{c}%'
+        }
+      }
+    ]
+  }
+  
+  questionCorrectnessChart.setOption(option)
+}
+
+const initCharts = () => {
+  nextTick(() => {
+    loadScoreDistributionChart()
+    loadQuestionCorrectnessChart()
+  })
+}
+
+const handleGenerateReport = async () => {
+  const examId = route.params.id
+  reportGenerating.value = true
+  try {
+    const res = await generateExamReport(examId, {
+      include_charts: true,
+      include_ranking: true
+    })
+    ElMessage.success('报告生成成功')
+  } catch (error) {
+    console.error('生成报告失败:', error)
+    ElMessage.error('生成报告失败')
+  } finally {
+    reportGenerating.value = false
+  }
+}
+
+const handleExportReport = async () => {
+  const examId = route.params.id
+  reportExporting.value = true
+  try {
+    const res = await exportExamReport(examId)
+    const blob = new Blob([res], { type: 'application/pdf' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${examInfo.value.title}_分析报告.pdf`
+    link.click()
+    window.URL.revokeObjectURL(url)
+    ElMessage.success('导出成功')
+  } catch (error) {
+    console.error('导出报告失败:', error)
+    ElMessage.error('导出报告失败')
+  } finally {
+    reportExporting.value = false
+  }
+}
+
+const handleSendEmail = async () => {
+  const examId = route.params.id
+  try {
+    await ElMessageBox.confirm('确定要发送成绩单邮件吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    
+    emailSending.value = true
+    const res = await sendScoreEmail(examId, {})
+    ElMessage.success(`成功发送 ${res.data.total_sent} 份成绩单`)
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('发送邮件失败:', error)
+      ElMessage.error('发送邮件失败')
+    }
+  } finally {
+    emailSending.value = false
+  }
+}
+
+// 监听 statistics 变化，当有数据时初始化图表
+watch(() => statistics.value, (newVal) => {
+  if (newVal && newVal.total_participants > 0) {
+    initCharts()
+  }
+})
+
 onMounted(() => {
   loadExamInfo()
   loadStatistics()
   loadStudentRecords()
+})
+
+onUnmounted(() => {
+  if (scoreDistributionChart) {
+    scoreDistributionChart.dispose()
+  }
+  if (questionCorrectnessChart) {
+    questionCorrectnessChart.dispose()
+  }
 })
 </script>
 

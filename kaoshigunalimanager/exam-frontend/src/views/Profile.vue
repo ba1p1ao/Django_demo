@@ -62,6 +62,19 @@
           </el-form>
         </el-tab-pane>
 
+        <el-tab-pane label="班级信息" name="class" v-if="userInfo.role === 'student'">
+          <div v-loading="classLoading" class="class-info">
+            <el-empty v-if="!classInfo" description="您还未加入班级" />
+            <el-descriptions v-else :column="2" border>
+              <el-descriptions-item label="班级名称">{{ classInfo.name }}</el-descriptions-item>
+              <el-descriptions-item label="年级">{{ classInfo.grade }}</el-descriptions-item>
+              <el-descriptions-item label="班主任">{{ classInfo.head_teacher_name }}</el-descriptions-item>
+              <el-descriptions-item label="学生人数">{{ classInfo.student_count }}人</el-descriptions-item>
+              <el-descriptions-item label="加入时间" :span="2">{{ classInfo.join_time }}</el-descriptions-item>
+            </el-descriptions>
+          </div>
+        </el-tab-pane>
+
         </el-tabs>
     </el-card>
   </div>
@@ -72,6 +85,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import { updateUserInfo, changePassword } from '@/api/user'
+import { getStudentClass } from '@/api/class'
 
 const userStore = useUserStore()
 
@@ -80,6 +94,8 @@ const formRef = ref(null)
 const passwordFormRef = ref(null)
 const loading = ref(false)
 const passwordLoading = ref(false)
+const classLoading = ref(false)
+const classInfo = ref(null)
 
 const userInfo = computed(() => userStore.userInfo || {})
 
@@ -167,8 +183,25 @@ onMounted(() => {
   if (userInfo.value) {
     form.nickname = userInfo.value.nickname || ''
     form.avatar = userInfo.value.avatar || ''
+    
+    // 如果是学生，加载班级信息
+    if (userInfo.value.role === 'student') {
+      loadClassInfo()
+    }
   }
 })
+
+const loadClassInfo = async () => {
+  classLoading.value = true
+  try {
+    const res = await getStudentClass()
+    classInfo.value = res.data
+  } catch (error) {
+    console.error(error)
+  } finally {
+    classLoading.value = false
+  }
+}
 </script>
 
 <style scoped>

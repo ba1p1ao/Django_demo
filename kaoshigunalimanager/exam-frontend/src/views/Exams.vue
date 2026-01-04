@@ -84,9 +84,10 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useUserStore } from '@/stores/user'
 import {
   getExamList,
   deleteExam,
@@ -94,7 +95,10 @@ import {
   closeExam
 } from '@/api/exam'
 
-const router = useRouter()
+const userStore = useUserStore()
+const userInfo = computed(() => userStore.userInfo || {})
+
+
 
 const loading = ref(false)
 const tableData = ref([])
@@ -227,6 +231,12 @@ const handleCurrentChange = (val) => {
 }
 
 onMounted(() => {
+  // 检查是否为教师或管理员
+  if (!['teacher', 'admin'].includes(userInfo.value.role)) {
+    ElMessage.error('您没有权限访问此页面')
+    router.push('/home')
+    return
+  }
   loadData()
 })
 </script>

@@ -122,15 +122,19 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, onActivated, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Download, Upload } from '@element-plus/icons-vue'
 import { getQuestionList, deleteQuestion, batchDeleteQuestions } from '@/api/question'
 import { exportQuestions } from '@/api/import-export'
 import QuestionImportDialog from '@/components/QuestionImportDialog.vue'
+import { useUserStore } from '@/stores/user'
 
-const router = useRouter()
+const userStore = useUserStore()
+const userInfo = computed(() => userStore.userInfo || {})
+
+
 const importDialogVisible = ref(false)
 
 const loading = ref(false)
@@ -224,9 +228,7 @@ const handleAdd = () => {
 }
 
 const handleImport = () => {
-  console.log('点击批量导入按钮')
   importDialogVisible.value = true
-  console.log('importDialogVisible:', importDialogVisible.value)
 }
 
 const handleExport = async () => {
@@ -312,6 +314,16 @@ const handleCurrentChange = (val) => {
 }
 
 onMounted(() => {
+  // 检查是否为教师或管理员
+  if (!['teacher', 'admin'].includes(userInfo.value.role)) {
+    ElMessage.error('您没有权限访问此页面')
+    router.push('/home')
+    return
+  }
+  loadData()
+})
+
+onActivated(() => {
   loadData()
 })
 </script>

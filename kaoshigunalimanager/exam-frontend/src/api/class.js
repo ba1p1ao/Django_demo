@@ -7,7 +7,7 @@ import request from '@/utils/request'
  */
 export function getClassList(params) {
   return request({
-    url: '/class/list',
+    url: '/class/list/',
     method: 'get',
     params
   })
@@ -20,7 +20,7 @@ export function getClassList(params) {
  */
 export function getClassDetail(id) {
   return request({
-    url: `/class/${id}`,
+    url: `/class/${id}/`,
     method: 'get'
   })
 }
@@ -32,7 +32,7 @@ export function getClassDetail(id) {
  */
 export function createClass(data) {
   return request({
-    url: '/class/create',
+    url: '/class/create/',
     method: 'post',
     data
   })
@@ -46,7 +46,7 @@ export function createClass(data) {
  */
 export function updateClass(id, data) {
   return request({
-    url: `/class/${id}`,
+    url: `/class/${id}/`,
     method: 'put',
     data
   })
@@ -59,7 +59,7 @@ export function updateClass(id, data) {
  */
 export function deleteClass(id) {
   return request({
-    url: `/class/${id}`,
+    url: `/class/${id}/`,
     method: 'delete'
   })
 }
@@ -72,7 +72,7 @@ export function deleteClass(id) {
  */
 export function updateClassStatus(id, data) {
   return request({
-    url: `/class/${id}/status`,
+    url: `/class/${id}/status/`,
     method: 'put',
     data
   })
@@ -86,7 +86,7 @@ export function updateClassStatus(id, data) {
  */
 export function getClassMembers(id, params) {
   return request({
-    url: `/class/${id}/members`,
+    url: `/class/${id}/members/`,
     method: 'get',
     params
   })
@@ -100,7 +100,7 @@ export function getClassMembers(id, params) {
  */
 export function addClassMembers(id, data) {
   return request({
-    url: `/class/${id}/members/add`,
+    url: `/class/${id}/members/add/`,
     method: 'post',
     data
   })
@@ -114,7 +114,7 @@ export function addClassMembers(id, data) {
  */
 export function removeClassMembers(id, data) {
   return request({
-    url: `/class/${id}/members/remove`,
+    url: `/class/${id}/members/remove/`,
     method: 'delete',
     data
   })
@@ -128,7 +128,7 @@ export function removeClassMembers(id, data) {
  */
 export function getAvailableStudents(id, params) {
   return request({
-    url: `/class/${id}/available-students`,
+    url: `/class/${id}/available-students/`,
     method: 'get',
     params
   })
@@ -141,7 +141,7 @@ export function getAvailableStudents(id, params) {
  */
 export function getClassStatistics(id) {
   return request({
-    url: `/class/${id}/statistics`,
+    url: `/class/${id}/statistics/`,
     method: 'get'
   })
 }
@@ -154,7 +154,7 @@ export function getClassStatistics(id) {
  */
 export function getClassExamRanking(id, params) {
   return request({
-    url: `/class/${id}/exam-ranking`,
+    url: `/class/${id}/exam-ranking/`,
     method: 'get',
     params
   })
@@ -168,7 +168,7 @@ export function getClassExamRanking(id, params) {
  */
 export function getClassScoreTrend(id, params) {
   return request({
-    url: `/class/${id}/score-trend`,
+    url: `/class/${id}/score-trend/`,
     method: 'get',
     params
   })
@@ -176,12 +176,14 @@ export function getClassScoreTrend(id, params) {
 
 /**
  * 获取教师管理的班级列表
+ * @param {Object} params - 查询参数
  * @returns {Promise}
  */
-export function getTeacherClasses() {
+export function getTeacherClasses(params) {
   return request({
-    url: '/teacher/classes',
-    method: 'get'
+    url: '/teacher/classes/',
+    method: 'get',
+    params
   })
 }
 
@@ -191,7 +193,7 @@ export function getTeacherClasses() {
  */
 export function getStudentClass() {
   return request({
-    url: '/student/class',
+    url: '/student/class/',
     method: 'get'
   })
 }
@@ -202,7 +204,7 @@ export function getStudentClass() {
  */
 export function getClassOptions() {
   return request({
-    url: '/class/options',
+    url: '/class/options/',
     method: 'get'
   })
 }

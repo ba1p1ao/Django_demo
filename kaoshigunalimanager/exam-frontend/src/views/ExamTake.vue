@@ -332,14 +332,6 @@ const saveCurrentAnswer = async () => {
     answer = (multipleAnswers[questionId] || []).sort().join(',')
   }
 
-  console.log('保存答案:', {
-    questionId,
-    questionType: currentQuestion.value.type,
-    answer,
-    answers,
-    currentQuestion: currentQuestion.value
-  })
-
   if (!answer) return
 
   try {

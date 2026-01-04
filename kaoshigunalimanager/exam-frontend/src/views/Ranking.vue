@@ -265,12 +265,15 @@ const loadExamList = async () => {
 
 const loadRankingData = async () => {
   if (!searchForm.exam_id) return
-  
+
   loading.value = true
   try {
     const params = {
       page: pagination.page,
       size: pagination.size
+    }
+    if (searchForm.class_id) {
+      params.class_id = searchForm.class_id
     }
     const res = await getExamRanking(searchForm.exam_id, params)
     rankingData.value = res.data
@@ -312,6 +315,10 @@ const handleClassChange = () => {
 }
 
 const loadClassList = async () => {
+  // 只有教师和管理员才需要加载班级列表
+  if (userInfo.value.role === 'student') {
+    return
+  }
   try {
     const res = await getClassOptions()
     classList.value = res.data || []

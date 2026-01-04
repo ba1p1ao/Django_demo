@@ -91,16 +91,12 @@ const initChart = () => {
 
 const loadData = async () => {
   try {
-    console.log('开始加载成绩趋势数据，天数:', props.days)
     const res = await getScoreTrendChart(props.days)
-    console.log('API 响应:', res)
 
     if (res.code === 200 && res.data) {
       const trendList = res.data.trend || []
-      console.log('趋势数据列表:', trendList)
 
       if (trendList.length === 0) {
-        console.log('暂无成绩数据')
         chartInstance.setOption({
           title: {
             text: '暂无考试成绩记录'
@@ -123,9 +119,6 @@ const loadData = async () => {
       })
       const scores = trendList.map(item => item.score)
 
-      console.log('日期数据:', dates)
-      console.log('分数数据:', scores)
-
       chartInstance.setOption({
         title: {
           text: '成绩趋势图'
@@ -140,7 +133,7 @@ const loadData = async () => {
         ]
       })
     } else {
-      console.log('响应码不是200:', res.code)
+      ElMessage.error('加载成绩趋势数据失败')
     }
   } catch (error) {
     console.error('加载成绩趋势数据失败:', error)

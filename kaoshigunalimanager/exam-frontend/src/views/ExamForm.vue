@@ -263,12 +263,17 @@
 import { ref, reactive, computed, onMounted, nextTick, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useUserStore } from '@/stores/user'
 import { Plus, Search, Refresh } from '@element-plus/icons-vue'
 import { getExamDetail, addExam, updateExam } from '@/api/exam'
 import { getClassOptions } from '@/api/class'
 import { getQuestionList } from '@/api/question'
 
-const router = useRouter()
+const userStore = useUserStore()
+const userInfo = computed(() => userStore.userInfo || {})
+
+// 检查是否为教师或管理员
+
 const route = useRoute()
 
 const formRef = ref(null)
@@ -685,11 +690,9 @@ const getRandomQuestionList = (questions, totalScore) => {
     // 4. 找到组合方案
     const combination = findCombination();
     if (!combination) {
-        console.log(`无法用现有题目组成总分 ${totalScore}`);
+        ElMessage.error(`无法用现有题目组成总分 ${totalScore}`)
         return [];
     }
-
-    // console.log("组合方案:", combination);
 
     // 5. 根据组合方案随机选择题目
     const selectedQuestions = [];
@@ -711,7 +714,6 @@ const getRandomQuestionList = (questions, totalScore) => {
 
     // 6. 验证总分
     const actualTotal = selectedQuestions.reduce((sum, q) => sum + q.score, 0);
-    console.log(`预期总分: ${totalScore}, 实际总分: ${actualTotal}`);
 
     return selectedQuestions;
 };
@@ -845,6 +847,12 @@ const loadDetail = async () => {
 }
 
 onMounted(() => {
+    // 检查是否为教师或管理员
+    if (!['teacher', 'admin'].includes(userInfo.value.role)) {
+      ElMessage.error('您没有权限访问此页面')
+      router.push('/home')
+      return
+    }
     loadClassList()
     if (isEdit.value) {
         loadDetail()

@@ -159,10 +159,16 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useUserStore } from '@/stores/user'
 import { getMistakeList, getMistakeStatistics, markMistakeAsMastered } from '@/api/mistake'
 import { exportMistakeQuestions } from '@/api/import-export'
+
+const userStore = useUserStore()
+const userInfo = computed(() => userStore.userInfo || {})
+const router = useRouter()
 
 const loading = ref(false)
 const tableData = ref([])
@@ -298,6 +304,12 @@ const handleCurrentChange = (val) => {
 }
 
 onMounted(() => {
+  // 检查是否为学生
+  if (userInfo.value.role !== 'student') {
+    ElMessage.error('此页面仅供学生使用')
+    router.push('/home')
+    return
+  }
   loadData()
   loadStatistics()
 })

@@ -141,10 +141,28 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getUserList, getUserDetail, updateUserStatus, updateUserRole, deleteUser, getUserStatistics } from '@/api/admin'
+import { useUserStore } from '@/stores/user'
+import {
+  getUserList,
+  getUserDetail,
+  updateUserStatus,
+  updateUserRole,
+  deleteUser,
+  getUserStatistics
+} from '@/api/admin'
 import { getClassOptions } from '@/api/class'
+
+const userStore = useUserStore()
+const userInfo = computed(() => userStore.userInfo || {})
+
+// 检查是否为管理员
+if (userInfo.value.role !== 'admin') {
+  ElMessage.error('您没有权限访问此页面')
+  router.push('/home')
+}
 
 const loading = ref(false)
 const tableData = ref([])
@@ -325,6 +343,12 @@ const handleCurrentChange = (val) => {
 }
 
 onMounted(() => {
+  // 检查是否为管理员
+  if (userInfo.value.role !== 'admin') {
+    ElMessage.error('您没有权限访问此页面')
+    router.push('/home')
+    return
+  }
   loadData()
   loadStatistics()
   loadClassList()

@@ -296,8 +296,6 @@ const loadListData = async () => {
   }
   // 如果是学生，不需要传递额外的过滤条件，后端会自动过滤
   const res = await getExamRecordList(params)
-  console.log('列表视图响应数据:', res)
-  console.log('tableData:', res.data.list)
   tableData.value = res.data.list || []
   pagination.total = res.data.total || 0
 }

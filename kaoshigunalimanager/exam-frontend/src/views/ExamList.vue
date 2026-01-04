@@ -32,11 +32,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { useUserStore } from '@/stores/user'
 import { getAvailableExamList } from '@/api/exam'
 
+const userStore = useUserStore()
+const userInfo = computed(() => userStore.userInfo || {})
 const router = useRouter()
 
 const loading = ref(false)
@@ -70,6 +73,12 @@ const handleTakeExam = async (exam) => {
 }
 
 onMounted(() => {
+  // 检查是否为学生
+  if (userInfo.value.role !== 'student') {
+    ElMessage.error('此页面仅供学生使用')
+    router.push('/home')
+    return
+  }
   loadExamList()
 })
 </script>
