@@ -867,11 +867,11 @@ class ExamRankingView(APIView):
         }
         class_id = request.GET.get("class_id")
         cur_class_students = User.objects.filter(role="student")
-        print(cur_class_students)
+        # print(cur_class_students)
         if class_id:
             cur_class_students = User.objects.filter(role="student", userclass__class_info_id=class_id)
 
-        print(cur_class_students)
+        # print(cur_class_students)
         # exam_record = exam_record.annotate(
         #     max_score=Max("score"),
         # ).values("user_id", "max_score")

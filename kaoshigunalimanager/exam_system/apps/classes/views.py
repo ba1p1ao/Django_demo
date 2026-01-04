@@ -344,6 +344,59 @@ class ClassMembersAddView(APIView):
         return MyResponse.success(data=response_data)
 
 
+class ClassMembersRemoveView(APIView):
+    @check_permission
+    def delete(self, request, class_id):
+        payload = request.user
+        request_data = request.data
+        user_ids = request_data.get("user_ids")
+
+        if not user_ids or not isinstance(user_ids, list):
+            return MyResponse.failed(message="请提供有效的用户ID列表")
+
+        if len(user_ids) == 0:
+            return MyResponse.failed(message="用户ID列表不能为空")
+
+        users = User.objects.filter(id__in=user_ids)
+        if not users:
+            return MyResponse.failed(message="用户信息不存在")
+
+        try:
+            class_obj = Class.objects.get(id=class_id)
+        except Class.DoesNotExist:
+            return MyResponse.failed(message="当前班级不存在")
+
+        # 查询在班级中的用户
+        user_classes = UserClass.objects.filter(
+            class_info=class_obj,
+            user_id__in=user_ids
+        )
+
+        existing_user_ids = set(uc.user_id for uc in user_classes)
+
+        if not existing_user_ids:
+            return MyResponse.success(data={
+                "success_count": 0,
+                "failed_count": len(user_ids),
+                "failed_list": [{"user_id": uid, "reason": "用户不在班级中"} for uid in user_ids]
+            })
+
+        # 批量删除
+        deleted_count, _ = user_classes.delete()
+
+        # 找出删除失败的用户（不在班级中的用户）
+        failed_ids = set(user_ids) - existing_user_ids
+
+        response_data = {
+            "success_count": deleted_count,
+            "failed_count": len(failed_ids),
+            "failed_list": [{"user_id": uid, "reason": "用户不在班级中"} for uid in failed_ids]
+        }
+
+        return MyResponse.success(data=response_data)
+
+
+
 class ClassAvailableStudentsView(APIView):
     @check_permission
     def get(self, request, class_id):
