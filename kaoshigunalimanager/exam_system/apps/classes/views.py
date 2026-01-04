@@ -269,7 +269,7 @@ class ClassMembersView(APIView):
         if total == 0:
             return MyResponse.success(data=response_data)
 
-        student_list = user_class_qs.select_related('user')[offset:offset + page_size]
+        student_list = user_class_qs.select_related('user').order_by("-user__role")[offset:offset + page_size]
 
         for student in student_list:
             data = {
