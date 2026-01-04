@@ -24,7 +24,7 @@ class ClassOptionView(APIView):
                 "grade": c.grade
             })
 
-        print(response_data)
+        # print(response_data)
         return MyResponse.success(data=response_data)
 
 
@@ -49,7 +49,7 @@ class ClassListView(APIView):
         classes = Class.objects.filter(**filter_body).annotate(
             student_count=Count("userclass__user")
         )
-        print(classes)
+        # print(classes)
         if not classes:
             return MyResponse.failed(message="当前没有班级信息")
 
@@ -270,7 +270,7 @@ class ClassMembersView(APIView):
         if total == 0:
             return MyResponse.success(data=response_data)
 
-        student_list = user_class_qs.select_related('user').order_by("-user__role")[offset:offset + page_size]
+        student_list = user_class_qs.select_related('user').order_by("-user__role", "join_time")[offset:offset + page_size]
 
         for student in student_list:
             data = {
@@ -283,6 +283,63 @@ class ClassMembersView(APIView):
                 "join_time": student.join_time.strftime("%Y-%m-%d %H:%M:%S"),
             }
             response_data["list"].append(data)
+
+        return MyResponse.success(data=response_data)
+
+
+class ClassMembersAddView(APIView):
+    @check_permission
+    def post(self, request, class_id):
+        payload = request.user
+        request_data = request.data
+
+        user_ids = request_data.get("user_ids")
+
+        if not user_ids or not isinstance(user_ids, list):
+            return MyResponse.failed(message="请提供有效的用户ID列表")
+
+        if len(user_ids) == 0:
+            return MyResponse.failed(message="用户ID列表不能为空")
+
+        users = User.objects.filter(id__in=user_ids)
+        if not users:
+            return MyResponse.failed(message="用户信息不存在")
+
+        try:
+            class_obj = Class.objects.get(id=class_id)
+        except Class.DoesNotExist:
+            return MyResponse.failed(message="当前班级不存在")
+
+        existing_user_ids = set(
+            UserClass.objects.filter(
+                class_info=class_obj,
+                user_id__in=user_ids
+            ).values_list('user_id', flat=True)
+        )
+
+        users_to_add = [user for user in users if user.id not in existing_user_ids]
+
+        if not users_to_add:
+            return MyResponse.success(data={
+                "success_count": 0,
+                "failed_count": len(user_ids),
+                "failed_list": [{"user_id": uid, "reason": "用户已在班级中"} for uid in user_ids]
+            })
+
+        user_class_objects = [
+            UserClass(user=user, class_info=class_obj)
+            for user in users_to_add
+        ]
+
+        created_objects = UserClass.objects.bulk_create(user_class_objects)
+
+        failed_ids = set(user_ids) - {uc.user_id for uc in created_objects}
+
+        response_data = {
+            "success_count": len(created_objects),
+            "failed_count": len(failed_ids),
+            "failed_list": [{"user_id": uid, "reason": "用户已在班级中"} for uid in failed_ids]
+        }
 
         return MyResponse.success(data=response_data)
 
@@ -300,9 +357,10 @@ class ClassAvailableStudentsView(APIView):
         cur_class_student_ids = [s.user_id for s in cur_class_students]
 
         # 获取所有学生信息
+        keyword = request.GET.get("keyword", "")
         students = User.objects.filter(~Q(id__in=cur_class_student_ids), role="student")
-        if not students:
-            return MyResponse.failed("没有可用的学生信息")
+        if keyword:
+            students = students.filter(Q(username__icontains=keyword) | Q(nickname__icontains=keyword))
 
         response_data = []
 

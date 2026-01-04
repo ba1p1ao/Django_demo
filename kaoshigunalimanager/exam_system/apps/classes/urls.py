@@ -10,5 +10,6 @@ urlpatterns = [
     path("<int:class_id>/status/", views.ClassStatusView.as_view()),
     path("<int:class_id>/statistics/", views.ClassStatisticsView.as_view()),
     path("<int:class_id>/members/", views.ClassMembersView.as_view()),
+    path("<int:class_id>/members/add/", views.ClassMembersAddView.as_view()),
     path("<int:class_id>/available-students/", views.ClassAvailableStudentsView.as_view()),
 ]
