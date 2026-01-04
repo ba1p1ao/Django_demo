@@ -1,7 +1,8 @@
-from django.db.models import Count, F
+from django.db.models import Count, F, Q, Avg, Max, Min, Case, When, FloatField
 from rest_framework.views import APIView
 from apps.classes.serializers import ClassListSerializer
 from apps.classes.models import Class, UserClass
+from apps.exam.models import ExamRecord
 from apps.user.models import User
 from utils.ResponseMessage import check_auth, check_permission, MyResponse
 
@@ -32,7 +33,6 @@ class ClassListView(APIView):
         payload = request.user
         request_data = request.GET
 
-        # name = 123 & grade = % E4 % B8 % 80 % E5 % B9 % B4 % E7 % BA % A7 & status = 1
         filter_body = {}
         page = int(request_data.get("page", 1))
         page_size = int(request_data.get("size", 10))
@@ -97,7 +97,6 @@ class ClassCreateView(APIView):
             return MyResponse.failed(message=f"添加班级错误，{e}")
 
 
-
 class ClassView(APIView):
     @check_permission
     def put(self, request, class_id):
@@ -110,7 +109,6 @@ class ClassView(APIView):
         update_class = Class.objects.filter(id=class_id).update(**request_data)
         if not update_class:
             return MyResponse.failed(message="班级信息不存在")
-
 
         return MyResponse.success(message="修改成功")
 
@@ -130,7 +128,6 @@ class ClassView(APIView):
             return MyResponse.failed(message=f"删除失败: {str(e)}")
 
 
-
 class ClassStatusView(APIView):
     @check_permission
     def put(self, request, class_id):
@@ -145,5 +142,93 @@ class ClassStatusView(APIView):
                 return MyResponse.failed(message="班级信息不存在")
 
             return MyResponse.success(message="修改成功")
-        except Exception as e:
+        except Class.DoesNotExist:
             return MyResponse.failed(message="班级信息不存在")
+
+
+class ClassStatisticsView(APIView):
+    @check_permission
+    def get(self, request, class_id):
+        payload = request.user
+
+        try:
+            class_obj = Class.objects.get(id=class_id)
+        except Class.DoesNotExist:
+            return MyResponse.failed(message="班级信息不存在")
+
+        response_data = {
+            "class_id": class_obj.id,
+            "class_name": class_obj.name,
+            "student_count": 0,
+            "exam_count": 0,
+            "average_score": 0.00,
+            "highest_score": 0.00,
+            "lowest_score": 0.00,
+            "pass_rate": 0.00,
+            "excellent_rate": 0.00,
+            "score_distribution": {
+                "0-59": 0,
+                "60-69": 0,
+                "70-79": 0,
+                "80-89": 0,
+                "90-100": 0
+            }
+        }
+
+        student_class_qs = UserClass.objects.filter(class_info=class_id)
+        response_data["student_count"] = student_class_qs.count()
+
+        if response_data["student_count"] == 0:
+            return MyResponse.success(data=response_data)
+
+        student_ids = [s.user_id for s in student_class_qs]
+
+        graded_records = ExamRecord.objects.filter(user_id__in=student_ids, status="graded")
+        response_data["exam_count"] = graded_records.count()
+
+        if response_data["exam_count"] == 0:
+            return MyResponse.success(data=response_data)
+
+        class_exam_score = graded_records.aggregate(
+            average_score=Avg("score"),
+            highest_score=Max("score"),
+            lowest_score=Min("score"),
+            pass_rate=Avg(
+                Case(
+                    When(is_passed=1, then=1.0),
+                    When(is_passed=0, then=0.0),
+                    default=None,
+                    output_field=FloatField()
+                )
+            ),
+            excellent_rate=Avg(
+                Case(
+                    When(score__gte=80, then=1.0),
+                    When(score__lt=80, then=0.0),
+                    default=None,
+                    output_field=FloatField()
+                )
+            )
+        )
+
+        response_data["average_score"] = round(class_exam_score["average_score"] or 0, 2)
+        response_data["highest_score"] = round(class_exam_score["highest_score"] or 0, 2)
+        response_data["lowest_score"] = round(class_exam_score["lowest_score"] or 0, 2)
+        response_data["pass_rate"] = round(class_exam_score["pass_rate"] or 0, 2)
+        response_data["excellent_rate"] = round(class_exam_score["excellent_rate"] or 0, 2)
+
+        student_max_scores = graded_records.values("user_id").annotate(max_score=Max("score"))
+        for er in student_max_scores:
+            max_score = er["max_score"]
+            if max_score >= 90:
+                response_data["score_distribution"]["90-100"] += 1
+            elif max_score >= 80:
+                response_data["score_distribution"]["80-89"] += 1
+            elif max_score >= 70:
+                response_data["score_distribution"]["70-79"] += 1
+            elif max_score >= 60:
+                response_data["score_distribution"]["60-69"] += 1
+            else:
+                response_data["score_distribution"]["0-59"] += 1
+
+        return MyResponse.success(data=response_data)

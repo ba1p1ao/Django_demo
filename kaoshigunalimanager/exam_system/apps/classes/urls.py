@@ -8,4 +8,5 @@ urlpatterns = [
     path("create/", views.ClassCreateView.as_view()),
     path("<int:class_id>/", views.ClassView.as_view()),
     path("<int:class_id>/status/", views.ClassStatusView.as_view()),
+    path("<int:class_id>/statistics/", views.ClassStatisticsView.as_view()),
 ]
