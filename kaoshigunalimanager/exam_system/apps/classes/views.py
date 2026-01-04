@@ -232,3 +232,55 @@ class ClassStatisticsView(APIView):
                 response_data["score_distribution"]["0-59"] += 1
 
         return MyResponse.success(data=response_data)
+
+
+class ClassMembersView(APIView):
+    @check_permission
+    def get(self, request, class_id):
+        payload = request.user
+
+        try:
+            class_obj = Class.objects.get(id=class_id)
+        except Class.DoesNotExist:
+            return MyResponse.failed(message="班级信息不存在")
+
+        page = int(request.GET.get("page", 1))
+        page_size = int(request.GET.get("size", 10))
+        offset = (page - 1) * page_size
+
+        role = request.GET.get("role", "")
+
+        user_class_qs = UserClass.objects.filter(class_info=class_id)
+
+        if role:
+            user_class_qs = user_class_qs.filter(user__role=role)
+
+        total = user_class_qs.count()
+
+        response_data = {
+            "class_id": class_obj.id,
+            "class_name": class_obj.name,
+            "list": [],
+            "total": total,
+            "page": page,
+            "size": page_size,
+        }
+
+        if total == 0:
+            return MyResponse.success(data=response_data)
+
+        student_list = user_class_qs.select_related('user')[offset:offset + page_size]
+
+        for student in student_list:
+            data = {
+                "id": student.user.id,
+                "username": student.user.username,
+                "nickname": student.user.nickname,
+                "role": student.user.role,
+                "avatar": student.user.avatar,
+                "status": student.user.status,
+                "join_time": student.join_time.strftime("%Y-%m-%d %H:%M:%S"),
+            }
+            response_data["list"].append(data)
+
+        return MyResponse.success(data=response_data)
