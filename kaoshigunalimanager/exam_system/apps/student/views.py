@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from django.db.models import Max, Min, Avg, Count, Case, When, FloatField
 from django.utils import timezone
 from apps.exam.models import ExamRecord, Exam
-
+from apps.classes.models import Class, UserClass
 from utils.ResponseMessage import check_auth, check_permission, MyResponse
 from datetime import timedelta
 
@@ -56,4 +56,41 @@ class ScoreTrendView(APIView):
         # print(response_data)
         
         
+        return MyResponse.success(data=response_data)
+
+
+class StudentClassView(APIView):
+    @check_auth
+    def get(self, request):
+        payload = request.user
+        user_id = payload.get("id")
+        
+        # 获取学生所在的班级
+        class_info = Class.objects.filter(userclass__user_id=user_id).first()
+        if not class_info:
+            return MyResponse.failed(message="您还未加入班级")
+        
+        # 获取当前班级所有学生
+        students = UserClass.objects.filter(class_info_id=class_info.id, user__role="student")
+        student_count = students.count()
+        
+        # 获取当前学生的加入时间
+        try:
+            current_student = students.get(user_id=user_id)
+            join_time = current_student.join_time.strftime("%Y-%m-%d %H:%M:%S")
+        except UserClass.DoesNotExist:
+            join_time = None
+        
+        # 获取班主任姓名
+        head_teacher_name = class_info.head_teacher.username if class_info.head_teacher else None
+        
+        response_data = {
+            "id": class_info.id,
+            "name": class_info.name,
+            "grade": class_info.grade,
+            "head_teacher_name": head_teacher_name,
+            "student_count": student_count,
+            "join_time": join_time,
+        }
+
         return MyResponse.success(data=response_data)
