@@ -33,4 +33,8 @@ urlpatterns = [
 
     # 考试排名
     path("<int:exam_id>/ranking/", views.ExamRankingView.as_view()),
+
+    # 成绩分布图数据
+    path("<int:exam_id>/chart/score-distribution/", views.ExamScoreDistributionView.as_view()),
+    path("<int:exam_id>/chart/question-correctness/", views.ExamQuestionCorrectnessView.as_view()),
 ]

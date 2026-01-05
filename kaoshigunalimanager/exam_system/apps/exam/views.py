@@ -1,3 +1,5 @@
+from statistics import mean
+
 from rest_framework.views import APIView
 from rest_framework import viewsets, generics
 from django.db import transaction
@@ -757,7 +759,6 @@ class GroupedExamRecordListView(APIView):
         
         title = request.GET.get('title', '')
         status = request.GET.get('status', '')
-        
         # 获取学生筛选参数
         student_username = request.GET.get('student_username', '')
         student_nickname = request.GET.get('student_nickname', '')
@@ -914,3 +915,110 @@ class ExamRankingView(APIView):
             return MyResponse.failed(message="排名信息获取失败")
             
         
+class ExamScoreDistributionView(APIView):
+    @check_permission
+    def get(self, request, exam_id):
+        payload = request.user
+        # 判断是否存在该试卷
+        try:
+            exam = Exam.objects.get(id=exam_id)
+        except Exam.DoesNotExist:
+            return MyResponse.failed(message="该试卷记录不存在")
+
+        # 判断这场考试是否有提交记录
+        exam_records = ExamRecord.objects.filter(exam_id=exam_id)
+        if not exam_records:
+            return MyResponse.failed(message="该试卷还没有考试记录")
+        total = exam_records.count()
+        response_data = {
+            "exam_id": exam_id,
+            "exam_title": exam.title,
+            "distribution": {
+                "0-59": 0,
+                "60-69": 0,
+                "70-79": 0,
+                "80-89": 0,
+                "90-100": 0
+            },
+            "total": total
+        }
+
+        for er in exam_records:
+            if er.score >= 90:
+                response_data["distribution"]["90-100"] += 1
+            elif er.score >= 80:
+                response_data["distribution"]["80-89"] += 1
+            elif er.score >= 70:
+                response_data["distribution"]["70-79"] += 1
+            elif er.score >= 60:
+                response_data["distribution"]["60-69"] += 1
+            else:
+                response_data["distribution"]["0-59"] += 1
+
+        return MyResponse.success(data=response_data)
+
+
+class ExamQuestionCorrectnessView(APIView):
+    @check_permission
+    def get(self, request, exam_id):
+        payload = request.user
+        # 判断是否存在该试卷
+        try:
+            exam = Exam.objects.get(id=exam_id)
+        except Exam.DoesNotExist:
+            return MyResponse.failed(message="该试卷记录不存在")
+
+        # 获取试卷的题目
+        exam_questions = ExamQuestion.objects.filter(exam_id=exam_id).select_related("question")
+
+        # 获取该试卷的考试答题记录
+        exam_record_ids = ExamRecord.objects.filter(exam_id=exam_id).values_list("id", flat=True)
+
+        response_data = {
+            "exam_id": exam_id,
+            "questions": []
+        }
+
+        # 获取每个题目的答题情况统计（按题目分组）
+        try:
+            question_stats = AnswerRecord.objects.filter(
+                exam_record_id__in=exam_record_ids
+            ).values("question_id").annotate(
+                correct_count=Count("id", filter=Q(is_correct=1)),
+                incorrect_count=Count("id", filter=Q(is_correct=0)),
+                correct_rate=Avg(
+                    Case(
+                        When(is_correct=1, then=1.0),
+                        When(is_correct=0, then=0.0),
+                        default=None,
+                        output_field=FloatField()
+                    )
+                )
+            )
+        except Exception as e:
+            return MyResponse.failed(message=f"获取题目答题情况错误，{e}")
+
+        # 构建题目ID到统计数据的映射
+        stats_map = {
+            stat['question_id']: stat for stat in question_stats
+        }
+
+        # 获取 每一个题目的正确率
+        for exam_q in exam_questions:
+            question = exam_q.question
+            stat = stats_map.get(exam_q.question_id, {
+                "correct_count": 0,
+                "incorrect_count": 0,
+                "correct_rate": 0
+            })
+            response_data["questions"].append({
+                "question_id": question.id,
+                "question_content": question.content,
+                "correct_count": stat["correct_count"],
+                "incorrect_count": stat["incorrect_count"],
+                "correct_rate": round(stat["correct_rate"] or 0, 2),
+            })
+
+
+        return MyResponse.success(data=response_data)
+
