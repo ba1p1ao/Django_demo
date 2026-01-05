@@ -19,6 +19,7 @@ class User(models.Model):
         default='student',
         verbose_name='角色'
     )
+    class_id = models.IntegerField(null=True, blank=True, verbose_name='班级ID')
     status = models.IntegerField(default=1, verbose_name='状态：1正常 0禁用')
     create_time = models.DateTimeField(null=True, blank=True, auto_now_add=True, verbose_name='创建时间')  # 已有表无需auto_now_add
     update_time = models.DateTimeField(null=True, blank=True, auto_now=True, verbose_name='更新时间')  # 已有表无需auto_now

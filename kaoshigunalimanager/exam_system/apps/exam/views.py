@@ -4,9 +4,10 @@ from rest_framework.views import APIView
 from rest_framework import viewsets, generics
 from django.db import transaction
 from django.db.models import Count, Avg, Case, When, FloatField, Q, Max, Min
-from apps.exam.models import Exam, ExamRecord, ExamQuestion, AnswerRecord
+from apps.exam.models import Exam, ExamRecord, ExamQuestion, AnswerRecord, ExamClass
 from apps.user.models import User
 from apps.question.models import Question
+from apps.classes.models import Class, UserClass
 from apps.exam.serializers import AnswersSerializer, ExamRecordListSerializer, ExamRecordDetailSerializer, ExamSerializer, ExamInfoSerializer, ExamRecordAddSerializer, GroupedExamSerializer
 from apps.question.serializers import QuestionListSerializers
 from utils.ResponseMessage import MyResponse, check_permission, check_auth # 添加认证的装饰器
@@ -32,8 +33,9 @@ class ExamListView(APIView):
             elif v:
                 filter_body[k] = v
 
-        # 添加用户权限过滤
-        filter_body["creator"] = payload.get("id")
+        # 管理员可以看见所有试卷
+        if payload.get("role") != "admin":
+            filter_body["creator"] = payload.get("id")
 
         try:
             page = int(request_data.get("page", 1))
@@ -136,6 +138,21 @@ class ExamAddView(APIView):
                         exam=exam, question=question, sort_order=index
                     )
 
+                # 处理班级关联
+                class_ids = request_data.get("class_ids")
+                if class_ids and isinstance(class_ids, list):
+                    # 验证班级是否存在
+                    db_classes = Class.objects.filter(id__in=class_ids)
+                    if db_classes.count() != len(class_ids):
+                        return MyResponse.failed("部分班级ID不存在")
+
+                    # 添加试卷班级关联
+                    for cls in db_classes:
+                        ExamClass.objects.create(
+                            exam=exam,
+                            class_info=cls
+                        )
+
                 return MyResponse.success(message="试卷添加成功", data={"id": exam.id})
 
         except Exception as e:
@@ -149,19 +166,19 @@ class ExamModelViewSet(viewsets.ModelViewSet):
     @check_auth
     def get(self, request, pk):
         payload = request.user
-        
+
         try:
             exam = self.get_queryset().get(id=pk)
         except Exam.DoesNotExist:
             return MyResponse.failed(message="试卷不存在")
-        
+
         try:
             exam_info = ExamInfoSerializer(instance=exam).data
+            print(exam_info)
         except Exception as e:
-            return MyResponse.failed(message="试卷获取失败")
-        
-        # print(exam_info)
-     
+            print(f"试卷序列化失败: {str(e)}")
+            return MyResponse.failed(message=f"试卷获取失败: {str(e)}")
+
         return MyResponse.success(data=exam_info)
     
     
@@ -169,7 +186,9 @@ class ExamModelViewSet(viewsets.ModelViewSet):
     def put(self, request, pk):
         payload = request.user
         try:
-            exam = self.get_queryset().get(id=pk, creator_id=payload.get("id"))
+            exam = self.get_queryset().get(id=pk)
+            if payload.get("role") == "teacher":
+                exam = exam.filter(creator_id=payload.get("id"))
         except Exam.DoesNotExist:
             return MyResponse.failed(message="试卷不存在")
 
@@ -253,6 +272,24 @@ class ExamModelViewSet(viewsets.ModelViewSet):
                             sort_order=start_sort + index
                         )
 
+                # 处理班级关联
+                class_ids = request.data.get("class_ids")
+                if class_ids is not None:
+                    # 删除旧的班级关联
+                    ExamClass.objects.filter(exam=exam).delete()
+
+                    # 添加新的班级关联
+                    if class_ids and isinstance(class_ids, list):
+                        db_classes = Class.objects.filter(id__in=class_ids)
+                        if db_classes.count() != len(class_ids):
+                            return MyResponse.failed("部分班级ID不存在")
+
+                        for cls in db_classes:
+                            ExamClass.objects.create(
+                                exam=exam,
+                                class_info=cls
+                            )
+
                 return MyResponse.success("修改成功")
 
         except Exception as e:
@@ -269,7 +306,7 @@ class ExamModelViewSet(viewsets.ModelViewSet):
             return MyResponse.failed(message="试卷不存在")
 
         # 检查试卷状态
-        if exam.status != "closed":
+        if exam.status == "published":
             return MyResponse.failed(message="无法删除正在发布的试卷")
 
         # 检查是否有考试记录
@@ -295,7 +332,8 @@ class ExamPublishView(APIView):
     @check_permission
     def put(self, request, pk):
         payload = request.user
-        update_count = Exam.objects.filter(id=pk, creator_id=payload.get("id")).update(status="published")
+
+        update_count = Exam.objects.filter(id=pk).update(status="published")
         if not update_count:
             return MyResponse.failed(message="修改试卷失败")
         return MyResponse.success(message="修改成功")
@@ -318,9 +356,22 @@ class ExamAvailableView(generics.ListAPIView):
     @check_auth
     def list(self, request, *args, **kwargs):
         payload = request.user
+
+        # 不管学生的班级信息，先获取所有的考试信息
         exam_list = self.get_queryset().filter(status="published")
-        if not exam_list:
-            return MyResponse.success("没有考试内容")
+
+        # 判断学生是否加入了班级
+        user_class = UserClass.objects.filter(user_id=payload.get("id"))
+        if user_class:
+            user_class = user_class.first()
+
+            user_class_id = user_class.class_info.id
+            print(user_class_id)
+
+            exam_list = exam_list.filter(Q(examclass__class_info__id=user_class_id) | Q(examclass__class_info__id=None))
+            if not exam_list:
+                return MyResponse.success("没有考试内容")
+            print(exam_list)
 
         # 判断试卷的时间是否结束
         valid_exam_list = []
@@ -529,11 +580,20 @@ class ExamSubmitView(APIView):
                 total_score = 0
 
                 # 计算得分 - 从数据库获取已保存的答案
+                # 批量获取所有已存在的答题记录
+                existing_records = AnswerRecord.objects.filter(
+                    exam_record=exam_record
+                ).select_related('question')
+
+                # 创建 question_id 到 answer_record 的映射
+                records_map = {r.question_id: r for r in existing_records}
+
+                # 批量更新和创建的列表
+                records_to_update = []
+                records_to_create = []
+
                 for question in questions:
-                    answer_record = AnswerRecord.objects.filter(
-                        exam_record=exam_record,
-                        question=question
-                    ).first()
+                    answer_record = records_map.get(question.id)
 
                     if answer_record and answer_record.user_answer:
                         # 判断答案是否正确
@@ -547,7 +607,29 @@ class ExamSubmitView(APIView):
                             answer_record.is_correct = 0
                             answer_record.score = 0
 
-                        answer_record.save()
+                        records_to_update.append(answer_record)
+                    # 如果用户没有答题
+                    else:
+                        records_to_create.append(
+                            AnswerRecord(
+                                exam_record_id=exam_record_id,
+                                question_id=question.id,
+                                user_answer="",
+                                is_correct=0,
+                                score=0,
+                            )
+                        )
+
+                # 批量创建未答题的记录
+                if records_to_create:
+                    AnswerRecord.objects.bulk_create(records_to_create)
+
+                # 批量更新已答题的记录
+                if records_to_update:
+                    AnswerRecord.objects.bulk_update(
+                        records_to_update,
+                        ['is_correct', 'score']
+                    )
 
                 # 更新考试记录
                 exam_record.score = total_score
@@ -1024,4 +1106,67 @@ class ExamQuestionCorrectnessView(APIView):
 
 
         return MyResponse.success(data=response_data)
+
+
+class ExamReportGenerate(APIView):
+    @check_permission
+    def post(self, request, exam_id):
+        payload = request.user
+        request_data = request.data
+        # 判断试卷是否存在
+        try:
+            exam = Exam.objects.get(id=exam_id)
+        except Exam.DoesNotExist:
+            return MyResponse.failed(message="该试卷已不存在")
+
+        response_data = {
+            "report_id": exam_id,
+            "exam_id": exam_id,
+            "exam_title": exam.title,
+            "generate_time": timezone.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "summary": {},
+            "question_analysis": [],
+        }
+
+        # 考试摘要统计
+        exam_record = ExamRecord.objects.filter(exam_id=exam_id, status="graded").select_related("user")
+        # 获取考试记录的人数
+        user_ids = [er.user.id for er in exam_record]
+        total_participants = len(set(user_ids))
+
+        response_data["summary"]["total_participants"] = total_participants
+
+        # 获取考试的分数信息
+        exam_score_state = exam_record.aggregate(
+            average_score=Avg("score"),
+            highest_score=Max("score"),
+            lowest_score=Min("score"),
+            pass_rate =  Avg(
+                Case(
+                    When(is_passed=1, then=1.0),
+                    When(is_passed=0, then=0.0),
+                    default=None,
+                    output_field=FloatField()
+                )
+            )
+        )
+        print(exam_score_state)
+        response_data["summary"]["average_score"] = round(exam_score_state["average_score"] or 0, 2)
+        response_data["summary"]["pass_rate"] = round(exam_score_state["pass_rate"] or 0, 2)
+        response_data["summary"]["highest_score"] = round(exam_score_state["highest_score"] or 0, 2)
+        response_data["summary"]["lowest_score"] = round(exam_score_state["lowest_score"] or 0, 2)
+        print(response_data)
+
+        # 题目分析
+
+
+        return MyResponse.failed()
+
+
+class ExamReportExport(APIView):
+    @check_permission
+    def get(self, request, exam_id):
+
+        pass
+
 

@@ -37,4 +37,8 @@ urlpatterns = [
     # 成绩分布图数据
     path("<int:exam_id>/chart/score-distribution/", views.ExamScoreDistributionView.as_view()),
     path("<int:exam_id>/chart/question-correctness/", views.ExamQuestionCorrectnessView.as_view()),
+
+    # 考试分析报告导出
+    path("<int:exam_id>/report/generate/", views.ExamReportGenerate.as_view()),
+    path("<int:exam_id>/report/export/", views.ExamReportExport.as_view()),
 ]

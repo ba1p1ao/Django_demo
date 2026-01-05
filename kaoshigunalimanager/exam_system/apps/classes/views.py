@@ -1,3 +1,5 @@
+from idlelib.rpc import response_queue
+
 from django.core.signals import request_started
 from django.db.models import Count, F, Q, Avg, Max, Min, Case, When, FloatField
 from rest_framework.views import APIView
@@ -66,8 +68,8 @@ class ClassListView(APIView):
                 class_data["id"] = c.id
                 class_data["name"] = c.name
                 class_data["grade"] = c.grade
-                class_data["head_teacher_id"] = c.head_teacher.id
-                class_data["head_teacher_name"] = c.head_teacher.username
+                class_data["head_teacher_id"] = c.head_teacher.id if c.head_teacher else None
+                class_data["head_teacher_name"] = c.head_teacher.username if c.head_teacher else None
                 class_data["student_count"] = c.student_count
                 class_data["status"] = c.status
                 class_data["create_time"] = c.create_time.strftime("%Y-%m-%d %H:%M:%S")
@@ -90,9 +92,19 @@ class ClassCreateView(APIView):
             user_teacher = User.objects.get(id=request_data["head_teacher_id"])
         except User.DoesNotExist:
             return MyResponse.failed(message="教师信息不存在")
+
+        class_obj = Class.objects.filter(name=request_data["name"])
+        if class_obj:
+            return MyResponse.failed(message="班级名称已存在")
+
         try:
+            # 添加班级信息
             create_class = Class.objects.create(**request_data)
 
+            # 将教师信息，添加到该班级里面
+            create_user_class = UserClass.objects.create(user=user_teacher, class_info=create_class)
+            # 修改用户表中的class_id
+            User.objects.filter(id=user_teacher.id).update(class_id=create_class.id)
             return MyResponse.success(message="班级添加成功")
         except Exception as e:
             return MyResponse.failed(message=f"添加班级错误，{e}")
@@ -106,10 +118,11 @@ class ClassView(APIView):
         if not request_data.get("head_teacher_id"):
             return MyResponse.failed(message="请选择教师信息")
 
-        # 获取班级信息
+        # 更新班级信息
         update_class = Class.objects.filter(id=class_id).update(**request_data)
         if not update_class:
             return MyResponse.failed(message="班级信息不存在")
+
 
         return MyResponse.success(message="修改成功")
 
@@ -332,6 +345,9 @@ class ClassMembersAddView(APIView):
         ]
 
         created_objects = UserClass.objects.bulk_create(user_class_objects)
+        
+        # 修改用户表的班级id
+        User.objects.filter(id__in=[user.id for user in users_to_add]).update(class_id=class_id)
 
         failed_ids = set(user_ids) - {uc.user_id for uc in created_objects}
 
@@ -386,6 +402,9 @@ class ClassMembersRemoveView(APIView):
 
         # 批量删除
         deleted_count, _ = user_classes.delete()
+        
+        # 修改用户表的班级id为null
+        User.objects.filter(id__in=existing_user_ids).update(class_id=None)
 
         # 找出删除失败的用户（不在班级中的用户）
         failed_ids = set(user_ids) - existing_user_ids
@@ -405,16 +424,12 @@ class ClassAvailableStudentsView(APIView):
     def get(self, request, class_id):
         payload = request.user
 
-        # 获取当前班级的学生信息
-        cur_class_students = UserClass.objects.filter(class_info=class_id, user__role="student")
-        if not cur_class_students:
-            return MyResponse.failed("当前班级学生信息获取失败")
-        # 获取当前班级的学生id
-        cur_class_student_ids = [s.user_id for s in cur_class_students]
+        # 获取未添加班级的学生或老师
+        students = User.objects.filter(~Q(role="admin"), class_id=None)
+        print(students)
 
-        # 获取所有学生信息
+        # 获取筛选字段后的学生信息
         keyword = request.GET.get("keyword", "")
-        students = User.objects.filter(~Q(id__in=cur_class_student_ids), role="student")
         if keyword:
             students = students.filter(Q(username__icontains=keyword) | Q(nickname__icontains=keyword))
 

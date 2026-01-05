@@ -49,8 +49,17 @@ class UserListView(APIView):
             user_ids = UserClass.objects.filter(class_info_id=class_id).values_list('user_id', flat=True)
             users = users.filter(id__in=user_ids)
 
-        if not users:
-            return MyResponse.failed(message="用户信息为空")
+        total = users.count()
+        page_list = users.order_by("-create_time")[offset:offset+page_size]
+
+        if not page_list:
+            response_data = {
+                "list": [],
+                "total": 0,
+                "page": page,
+                "size": page_size,
+            }
+            return MyResponse.success(data=response_data)
 
         total = users.count()
         page_list = users.order_by("-create_time")[offset:offset+page_size]

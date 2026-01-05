@@ -1,6 +1,7 @@
 from django.db import models
 from apps.user.models import User
 from apps.question.models import Question
+from apps.classes.models import Class
 
 # 试卷状态枚举
 EXAM_STATUS_CHOICES = (
@@ -55,6 +56,32 @@ class Exam(models.Model):
 
     def __str__(self):
         return self.title
+
+class ExamClass(models.Model):
+    """试卷班级关联模型"""
+    exam = models.ForeignKey(
+        Exam,
+        on_delete=models.CASCADE,
+        db_column='exam_id',
+        verbose_name='试卷'
+    )
+    class_info = models.ForeignKey(
+        Class,
+        on_delete=models.CASCADE,
+        db_column='class_id',
+        verbose_name='班级'
+    )
+    create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+
+    class Meta:
+        db_table = 'exam_class'
+        verbose_name = '试卷班级关联'
+        verbose_name_plural = '试卷班级关联'
+        managed = False
+        unique_together = [['exam', 'class_info']]
+
+    def __str__(self):
+        return f'{self.exam.title} - {self.class_info.name}'
 
 class ExamQuestion(models.Model):
     """试卷题目关联模型（映射已有的exam_question表）"""

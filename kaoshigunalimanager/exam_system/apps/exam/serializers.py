@@ -31,19 +31,26 @@ class ExamInfoSerializer(serializers.ModelSerializer):
 
     question_ids = serializers.SerializerMethodField()
     questions = serializers.SerializerMethodField()
-    
+    class_ids = serializers.SerializerMethodField()
+
     def get_question_ids(self, obj):
         examquestions = ExamQuestion.objects.filter(exam=obj).values("question_id")
         ids = [question.get("question_id") for question in examquestions]
         return ids
-    
+
     def get_questions(self, obj):
         examquestions = ExamQuestion.objects.filter(exam=obj)
         questions = [examquestion.question for examquestion in examquestions]
-        questions_ser_data = ExamQuestionSerializer(instance=questions, many=True).data    
+        questions_ser_data = ExamQuestionSerializer(instance=questions, many=True).data
         return questions_ser_data
-        
-        
+
+    def get_class_ids(self, obj):
+        from apps.exam.models import ExamClass
+        exam_classes = ExamClass.objects.filter(exam=obj).values("class_info_id")
+        ids = [ec.get("class_info_id") for ec in exam_classes]
+        return ids
+
+
     class Meta:
         model = Exam
         fields = "__all__"
