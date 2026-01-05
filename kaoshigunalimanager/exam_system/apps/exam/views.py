@@ -671,26 +671,32 @@ class ExamRecordStatisticsView(APIView):
         exam = Exam.objects.filter(id=exam_id).first()
         if not exam:
             return MyResponse.failed("考试不存在")
-        
-        # 获取已提交且已阅卷的记录
-        exam_records = ExamRecord.objects.filter(
+
+        # 获取所有已提交的考试记录（包括已提交和已阅卷）
+        all_records = ExamRecord.objects.filter(
             exam_id=exam_id,
-            status='graded'
+            status__in=['submitted', 'graded']
         )
-        
-        # 如果没有记录，返回默认值
-        if not exam_records.exists():
+
+        # 统计实际参加人数（去重）
+        total_participants = all_records.values('user_id').distinct().count()
+
+        # 只统计已阅卷的记录用于计算分数
+        graded_records = all_records.filter(status='graded')
+
+        # 如果没有已阅卷的记录，返回默认值但包含参加人数
+        if not graded_records.exists():
             return MyResponse.success(data={
-                "total_participants": 0,
+                "total_participants": total_participants,
                 "average_score": None,
                 "pass_rate": None,
                 "max_score": None,
                 "min_score": None,
                 "question_stats": []
             })
-        
+
         # 统计考试记录数据
-        stats = exam_records.aggregate(
+        stats = graded_records.aggregate(
             total_participants=Count('user_id', distinct=True),
             average_score=Avg('score'),
             pass_rate=Avg(
@@ -872,21 +878,19 @@ class ExamRankingView(APIView):
         if class_id:
             cur_class_students = User.objects.filter(role="student", userclass__class_info_id=class_id)
 
-        # print(cur_class_students)
-        # exam_record = exam_record.annotate(
-        #     max_score=Max("score"),
-        # ).values("user_id", "max_score")
-        # print(exam_record)
         user_score_list = cur_class_students.annotate(
             max_score=Max("examrecord__score", filter=Q(examrecord__exam_id=exam_id)),
         ).values("id", "username", "nickname", "max_score").order_by("-max_score")
-                
-        response_data["total_participants"] = user_score_list.count()
+
+        # 只统计真正参加了考试的学生（max_score 不为 null）
+        participated_students = user_score_list.filter(max_score__isnull=False)
+        response_data["total_participants"] = participated_students.count()
+
         # print(user_score_list)
         try:
-            for index, user_score in enumerate(user_score_list, 1):
+            for index, user_score in enumerate(participated_students, 1):
                 exam_record_best = ExamRecord.objects.filter(
-                    exam_id=exam_id, 
+                    exam_id=exam_id,
                     user_id=user_score["id"],
                     score=user_score["max_score"]
                 ).values("is_passed", "submit_time").first()
@@ -900,7 +904,6 @@ class ExamRankingView(APIView):
                 rank_list_dict["score"] = user_score["max_score"]
     
                 # 获取学生最高成绩的考试记录
-
                 rank_list_dict["is_passed"] = exam_record_best["is_passed"]
                 rank_list_dict["submit_time"] = exam_record_best["submit_time"].strftime("%Y-%m-%d %H:%M:%S")
                 if user_score["id"] == payload.get("id"):
