@@ -97,8 +97,7 @@ import {
 
 const userStore = useUserStore()
 const userInfo = computed(() => userStore.userInfo || {})
-
-
+const router = useRouter()
 
 const loading = ref(false)
 const tableData = ref([])
@@ -162,6 +161,8 @@ const handleReset = () => {
 }
 
 const handleAdd = () => {
+  console.log('点击创建试卷按钮')
+  console.log('当前用户角色:', userInfo.value?.role)
   router.push('/exams/add')
 }
 
@@ -232,7 +233,8 @@ const handleCurrentChange = (val) => {
 
 onMounted(() => {
   // 检查是否为教师或管理员
-  if (!['teacher', 'admin'].includes(userInfo.value.role)) {
+  const userRole = userInfo.value?.role
+  if (!userRole || !['teacher', 'admin'].includes(userRole)) {
     ElMessage.error('您没有权限访问此页面')
     router.push('/home')
     return

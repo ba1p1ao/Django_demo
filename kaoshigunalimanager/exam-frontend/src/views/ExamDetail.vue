@@ -18,7 +18,7 @@
           <el-descriptions-item label="及格分">{{ examInfo.pass_score }} 分</el-descriptions-item>
           <el-descriptions-item label="考试时长">{{ examInfo.duration }} 分钟</el-descriptions-item>
           <el-descriptions-item label="状态">
-            <el-tag :type="getExamStatusColor(examInfo.status)">{{ getExamStatusText(examInfo.status) }}</el-tag>
+            <el-tag :type="getExamStatusColor(examInfo.status) || undefined">{{ getExamStatusText(examInfo.status) }}</el-tag>
           </el-descriptions-item>
           <el-descriptions-item label="开始时间">{{ examInfo.start_time || '-' }}</el-descriptions-item>
           <el-descriptions-item label="结束时间">{{ examInfo.end_time || '-' }}</el-descriptions-item>
@@ -77,12 +77,6 @@
             <el-button type="success" @click="handleExportReport" :loading="reportExporting">
               <el-icon><Download /></el-icon>
               导出报告（PDF）
-            </el-button>
-          </el-col>
-          <el-col :span="8">
-            <el-button type="warning" @click="handleSendEmail" :loading="emailSending">
-              <el-icon><Message /></el-icon>
-              发送成绩单邮件
             </el-button>
           </el-col>
         </el-row>
@@ -155,7 +149,7 @@
           </el-table-column>
           <el-table-column prop="status" label="状态" width="100">
             <template #default="{ row }">
-              <el-tag :type="getStatusColor(row.status)" size="small">{{ getStatusText(row.status) }}</el-tag>
+              <el-tag :type="getStatusColor(row.status) || undefined" size="small">{{ getStatusText(row.status) }}</el-tag>
             </template>
           </el-table-column>
           <el-table-column prop="start_time" label="开始时间" width="180" />
@@ -174,11 +168,11 @@
 <script setup>
 import { ref, reactive, onMounted, computed, nextTick, watch, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { ArrowLeft, Document, Download, Message } from '@element-plus/icons-vue'
+import { ArrowLeft, Document, Download } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getExamDetail, getExamStatistics, getGroupedExamRecords } from '@/api/exam'
 import { getScoreDistributionChart, getQuestionCorrectnessChart } from '@/api/chart'
-import { generateExamReport, exportExamReport, sendScoreEmail } from '@/api/report'
+import { generateExamReport, exportExamReport } from '@/api/report'
 import * as echarts from 'echarts'
 
 const router = useRouter()
@@ -192,7 +186,6 @@ const scoreDistributionChartRef = ref(null)
 const questionCorrectnessChartRef = ref(null)
 const reportGenerating = ref(false)
 const reportExporting = ref(false)
-const emailSending = ref(false)
 let scoreDistributionChart = null
 let questionCorrectnessChart = null
 
@@ -218,7 +211,7 @@ const getExamStatusColor = (status) => {
     published: 'success',
     closed: 'danger'
   }
-  return colorMap[status] || ''
+  return colorMap[status]
 }
 
 const getStatusText = (status) => {
@@ -238,7 +231,7 @@ const getStatusColor = (status) => {
     submitted: 'primary',
     graded: 'success'
   }
-  return colorMap[status] || ''
+  return colorMap[status]
 }
 
 const getRoleText = (role) => {
@@ -306,9 +299,9 @@ const handleReset = () => {
 
 const filteredStudentRecords = computed(() => {
   let records = studentRecords.value || []
-  
+
   const { username, nickname, status, is_passed } = searchForm
-  
+
   return records.filter(record => {
     // 用户名筛选
     if (username && !record.username?.toLowerCase().includes(username.toLowerCase())) {
@@ -318,12 +311,12 @@ const filteredStudentRecords = computed(() => {
     if (nickname && !record.nickname?.toLowerCase().includes(nickname.toLowerCase())) {
       return false
     }
-    // 状态筛选
-    if (status && record.status !== status) {
+    // 状态筛选（当 status 为空字符串、null 或 undefined 时不过滤）
+    if (status && status !== '' && status !== null && status !== undefined && record.status !== status) {
       return false
     }
-    // 是否及格筛选
-    if (is_passed !== '' && record.is_passed !== is_passed) {
+    // 是否及格筛选（当 is_passed 为空字符串、null 或 undefined 时不过滤）
+    if (is_passed !== '' && is_passed !== null && is_passed !== undefined && record.is_passed != is_passed) {
       return false
     }
     return true
@@ -501,28 +494,6 @@ const handleExportReport = async () => {
     ElMessage.error('导出报告失败')
   } finally {
     reportExporting.value = false
-  }
-}
-
-const handleSendEmail = async () => {
-  const examId = route.params.id
-  try {
-    await ElMessageBox.confirm('确定要发送成绩单邮件吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
-    
-    emailSending.value = true
-    const res = await sendScoreEmail(examId, {})
-    ElMessage.success(`成功发送 ${res.data.total_sent} 份成绩单`)
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('发送邮件失败:', error)
-      ElMessage.error('发送邮件失败')
-    }
-  } finally {
-    emailSending.value = false
   }
 }
 

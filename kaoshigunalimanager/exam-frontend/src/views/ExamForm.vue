@@ -273,7 +273,7 @@ const userStore = useUserStore()
 const userInfo = computed(() => userStore.userInfo || {})
 
 // 检查是否为教师或管理员
-
+const router = useRouter()
 const route = useRoute()
 
 const formRef = ref(null)
@@ -837,7 +837,8 @@ const loadDetail = async () => {
             end_time: data.end_time,
             is_random: data.is_random,
             allow_retake: data.allow_retake || 0,
-            question_ids: data.question_ids || []
+            question_ids: data.question_ids || [],
+            class_ids: data.class_ids || []
         })
         selectedQuestions.value = data.questions || []
     } catch (error) {
@@ -848,7 +849,8 @@ const loadDetail = async () => {
 
 onMounted(() => {
     // 检查是否为教师或管理员
-    if (!['teacher', 'admin'].includes(userInfo.value.role)) {
+    const userRole = userInfo.value?.role
+    if (!userRole || !['teacher', 'admin'].includes(userRole)) {
       ElMessage.error('您没有权限访问此页面')
       router.push('/home')
       return

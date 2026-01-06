@@ -4,9 +4,9 @@
       <template #header>
         <div class="card-header">
           <span>成绩排名</span>
-          <el-radio-group v-model="viewMode" size="small">
-            <el-radio-button label="exam">考试排名</el-radio-button>
-            <el-radio-button label="trend">成绩趋势</el-radio-button>
+          <el-radio-group v-model="viewMode" size="small" v-if="userInfo.role === 'student'">
+            <el-radio-button value="exam">考试排名</el-radio-button>
+            <el-radio-button value="trend">成绩趋势</el-radio-button>
           </el-radio-group>
         </div>
       </template>
@@ -288,19 +288,21 @@ const loadRankingData = async () => {
 const loadTrendData = async () => {
   try {
     const res = await getStudentScoreTrend({ days: trendDays.value })
-    trendData.value = res.data
-    // 按时间由近到远排序
-    if (trendData.value.trend && trendData.value.trend.length > 0) {
-      trendData.value.trend.sort((a, b) => {
-        return new Date(b.date) - new Date(a.date)
-      })
-    }
-    // 刷新图表
-    if (trendChartRef.value) {
-      trendChartRef.value.refresh()
+    if (res.data) {
+      trendData.value = res.data
+      // 按时间由近到远排序
+      if (trendData.value.trend && trendData.value.trend.length > 0) {
+        trendData.value.trend.sort((a, b) => {
+          return new Date(b.date) - new Date(a.date)
+        })
+      }
+      // 刷新图表
+      if (trendChartRef.value) {
+        trendChartRef.value.refresh()
+      }
     }
   } catch (error) {
-    console.error(error)
+    console.error('加载成绩趋势数据失败:', error)
   }
 }
 
@@ -340,7 +342,10 @@ const handleCurrentChange = (val) => {
 onMounted(() => {
   loadExamList()
   loadClassList()
-  loadTrendData()
+  // 只有学生才加载成绩趋势数据
+  if (userInfo.value.role === 'student') {
+    loadTrendData()
+  }
 })
 </script>
 

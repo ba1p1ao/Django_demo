@@ -50,10 +50,10 @@
         <el-form-item label="正确答案" prop="answer">
           <template v-if="form.type === 'single'">
             <el-radio-group v-model="form.answer">
-              <el-radio label="A">A</el-radio>
-              <el-radio label="B">B</el-radio>
-              <el-radio label="C">C</el-radio>
-              <el-radio label="D">D</el-radio>
+              <el-radio value="A">A</el-radio>
+              <el-radio value="B">B</el-radio>
+              <el-radio value="C">C</el-radio>
+              <el-radio value="D">D</el-radio>
             </el-radio-group>
           </template>
           <template v-else-if="form.type === 'multiple'">
@@ -66,8 +66,8 @@
           </template>
           <template v-else-if="form.type === 'judge'">
             <el-radio-group v-model="form.answer">
-              <el-radio label="true">正确</el-radio>
-              <el-radio label="false">错误</el-radio>
+              <el-radio value="true">正确</el-radio>
+              <el-radio value="false">错误</el-radio>
             </el-radio-group>
           </template>
           <template v-else-if="form.type === 'fill'">

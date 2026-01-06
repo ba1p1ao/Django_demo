@@ -6,8 +6,8 @@
           <span>考试记录</span>
           <div class="view-switch" v-if="isTeacherOrAdmin">
             <el-radio-group v-model="viewMode" size="small">
-              <el-radio-button label="grouped">按考试分组</el-radio-button>
-              <el-radio-button label="list">列表视图</el-radio-button>
+              <el-radio-button value="grouped">按考试分组</el-radio-button>
+              <el-radio-button value="list">列表视图</el-radio-button>
             </el-radio-group>
           </div>
         </div>

@@ -28,7 +28,7 @@
               <li>难度：easy（简单）、medium（中等）、hard（困难）</li>
               <li>单选题答案填写选项字母（如：A、B、C、D）</li>
               <li>多选题答案用逗号分隔（如：A,B,D）</li>
-              <li>判断题答案填写：true 或 false</li>
+              <li>判断题答案填写：A 或 B</li>
               <li>填空题答案直接填写内容</li>
               <li>文件大小限制：10MB</li>
             </ul>

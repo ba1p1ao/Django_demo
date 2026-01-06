@@ -49,7 +49,7 @@ const generateTemplateFile = () => {
         选项B: "",
         选项C: "",
         选项D: "",
-        正确答案: "true",
+        正确答案: "A",
         题目解析: "地球是圆的",
         难度: "easy",
         分值: 5,

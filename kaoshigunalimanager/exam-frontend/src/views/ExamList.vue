@@ -21,6 +21,7 @@
               size="small"
               @click="handleTakeExam(row)"
               :disabled="!canTakeExam(row)"
+              :title="getDisabledMessage(row)"
             >
               参加考试
             </el-button>
@@ -36,7 +37,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
-import { getAvailableExamList } from '@/api/exam'
+import { getAvailableExamList, getExamRecordList } from '@/api/exam'
 
 const userStore = useUserStore()
 const userInfo = computed(() => userStore.userInfo || {})
@@ -44,12 +45,56 @@ const router = useRouter()
 
 const loading = ref(false)
 const examList = ref([])
+const userExamRecords = ref([])
 
 const canTakeExam = (exam) => {
   const now = new Date()
   const startTime = new Date(exam.start_time)
   const endTime = new Date(exam.end_time)
-  return now >= startTime && now <= endTime
+  
+  // 检查考试时间
+  const inTimeRange = now >= startTime && now <= endTime
+  if (!inTimeRange) {
+    return false
+  }
+  
+  // 如果不允许重复作答，检查是否已经参加过
+  if (exam.allow_retake === 0) {
+    const hasTaken = userExamRecords.value.some(
+      record => record.exam_id === exam.id
+    )
+    if (hasTaken) {
+      return false
+    }
+  }
+  
+  return true
+}
+
+const getDisabledMessage = (exam) => {
+  const now = new Date()
+  const startTime = new Date(exam.start_time)
+  const endTime = new Date(exam.end_time)
+  
+  // 检查考试时间
+  if (now < startTime) {
+    return '考试尚未开始'
+  }
+  if (now > endTime) {
+    return '考试已结束'
+  }
+  
+  // 检查是否已参加
+  if (exam.allow_retake === 0) {
+    const hasTaken = userExamRecords.value.some(
+      record => record.exam_id === exam.id
+    )
+    if (hasTaken) {
+      return '该考试不允许重复作答'
+    }
+  }
+  
+  return ''
 }
 
 const loadExamList = async () => {
@@ -57,6 +102,10 @@ const loadExamList = async () => {
   try {
     const res = await getAvailableExamList()
     examList.value = res.data || []
+    
+    // 加载用户的考试记录
+    const recordsRes = await getExamRecordList({ page: 1, size: 1000 })
+    userExamRecords.value = recordsRes.data.list || []
   } catch (error) {
     console.error(error)
   } finally {
