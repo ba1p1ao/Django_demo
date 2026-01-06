@@ -88,6 +88,7 @@
                 <el-option label="地理" value="地理" />
                 <el-option label="政治" value="政治" />
                 <el-option label="常识" value="常识" />
+                <el-option label="音乐" value="音乐" />
                 <el-option label="计算机" value="计算机" />
               </el-select>
             </el-form-item>

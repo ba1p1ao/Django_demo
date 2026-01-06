@@ -75,6 +75,10 @@
           </div>
         </el-tab-pane>
 
+        <el-tab-pane label="成绩对比" name="comparison" v-if="userInfo.role === 'student'">
+          <StudentScoreComparisonChart ref="comparisonChartRef" />
+        </el-tab-pane>
+
         </el-tabs>
     </el-card>
   </div>
@@ -86,6 +90,7 @@ import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import { updateUserInfo, changePassword } from '@/api/user'
 import { getStudentClass } from '@/api/class'
+import StudentScoreComparisonChart from '@/components/StudentScoreComparisonChart.vue'
 
 const userStore = useUserStore()
 
