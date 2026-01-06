@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "apps.student",
     "apps.classes",
     "apps.teacher",
+    "apps.mistake",
 ]
 
 # 允许所有域名跨域 cors_origin_allow_all = true
@@ -160,8 +161,8 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 # Media files configuration
-MEDIA_URL = 'media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+# MEDIA_URL = 'media/'
+# MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
