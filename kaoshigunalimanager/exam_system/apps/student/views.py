@@ -1,10 +1,12 @@
 from rest_framework.views import APIView
 from django.db.models import Max, Min, Avg, Count, Case, When, FloatField
 from django.utils import timezone
+from apps.user.models import User
 from apps.exam.models import ExamRecord, Exam
 from apps.classes.models import Class, UserClass
 from utils.ResponseMessage import check_auth, check_permission, MyResponse
 from datetime import timedelta
+
 
 class ScoreTrendView(APIView):
     @check_auth
@@ -16,9 +18,10 @@ class ScoreTrendView(APIView):
 
         days = int(request.GET.get("days"))
         timeago = timezone.now() - timedelta(days=days)
-        exam_records = ExamRecord.objects.filter(user_id=user_id, status="graded", exam__end_time__gte=timeago).select_related('exam')
+        exam_records = ExamRecord.objects.filter(user_id=user_id, status="graded",
+                                                 exam__end_time__gte=timeago).select_related('exam')
         if not exam_records:
-            return MyResponse.failed(message="暂无考试成绩记录") 
+            return MyResponse.failed(message="暂无考试成绩记录")
         try:
             stats = exam_records.aggregate(
                 total_exams=Count("id"),
@@ -36,7 +39,7 @@ class ScoreTrendView(APIView):
             )
         except Exception as e:
             return MyResponse.failed(message=f"获取成绩记录发生错误，{e}")
-        
+
         trend_list = []
         for exam_record in exam_records:
             trend_list.append({
@@ -44,7 +47,7 @@ class ScoreTrendView(APIView):
                 "exam_title": exam_record.exam.title,
                 "score": exam_record.score
             })
-            
+
         response_data = {
             "total_exams": stats.get("total_exams"),
             "average_score": stats.get("average_score"),
@@ -54,8 +57,7 @@ class ScoreTrendView(APIView):
             "trend": trend_list
         }
         # print(response_data)
-        
-        
+
         return MyResponse.success(data=response_data)
 
 
@@ -64,26 +66,26 @@ class StudentClassView(APIView):
     def get(self, request):
         payload = request.user
         user_id = payload.get("id")
-        
+
         # 获取学生所在的班级
         class_info = Class.objects.filter(userclass__user_id=user_id).first()
         if not class_info:
             return MyResponse.failed(message="您还未加入班级")
-        
+
         # 获取当前班级所有学生
         students = UserClass.objects.filter(class_info_id=class_info.id, user__role="student")
         student_count = students.count()
-        
+
         # 获取当前学生的加入时间
         try:
             current_student = students.get(user_id=user_id)
             join_time = current_student.join_time.strftime("%Y-%m-%d %H:%M:%S")
         except UserClass.DoesNotExist:
             join_time = None
-        
+
         # 获取班主任姓名
         head_teacher_name = class_info.head_teacher.username if class_info.head_teacher else None
-        
+
         response_data = {
             "id": class_info.id,
             "name": class_info.name,
@@ -93,4 +95,76 @@ class StudentClassView(APIView):
             "join_time": join_time,
         }
 
+        return MyResponse.success(data=response_data)
+
+
+class StudentScoreComparisonView(APIView):
+    @check_auth
+    def get(self, request):
+        payload = request.user
+
+        user_id = payload.get("id")
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return MyResponse.failed(message="用户信息不存在")
+        # 获取用户参加过的考试记录（已阅卷），按考试分组取最高分
+        exam_records = ExamRecord.objects.filter(user_id=user_id, status="graded").values("exam_id").annotate(
+            max_score=Max("score")
+        ).order_by("exam_id")
+        # print(exam_records)
+
+        # 初始化相应数据
+        response_data = {
+            "my_scores": [],
+            "class_average": [],
+            "exam_titles": []
+        }
+        if not exam_records.exists():
+            return MyResponse.success(data=response_data)
+
+        # 获取考试ID列表
+        exam_ids = [er["exam_id"] for er in exam_records]
+        # 获取用户所在班级的所有学生
+        class_student_ids = User.objects.filter(class_id=user.class_id, role="student").values_list("id", flat=True)
+        # print(class_student_ids)
+
+        # 如果班级只有自己
+        if len(class_student_ids) == 1:
+            return MyResponse.success(data={
+                "my_scores": [er["max_score"] for er in exam_records],
+                "class_average": [er["max_score"] for er in exam_records],  # 班级平均就是自己的成绩
+                "exam_titles": []
+            })
+
+        # 获取班级所有学生在这些考试中的记录
+        cur_class_student_exam_record = ExamRecord.objects.filter(
+            exam_id__in=exam_ids, user_id__in=class_student_ids, status="graded"
+        )
+        # print(cur_class_student_exam_record)
+
+        # 计算每个考试的班级平均分
+        class_avg_scores = cur_class_student_exam_record.values("exam_id", "exam__title").annotate(
+            class_average=Avg("score")
+        ).order_by("exam_id")
+
+        # 构建考试ID到平均分的映射
+        exam_avg_map = {cas["exam_id"]: cas["class_average"] for cas in class_avg_scores}
+        exam_title_map = {cas["exam_id"]: cas["exam__title"] for cas in class_avg_scores}
+
+        # 构建响应数据
+        my_scores = []
+        class_average = []
+        exam_titles = []
+        for er in exam_records:
+            exam_id = er["exam_id"]
+            my_scores.append(er["max_score"])
+            class_average.append(exam_avg_map.get(exam_id, 0))
+            exam_titles.append(exam_title_map.get(exam_id, f"考试{exam_id}"))
+
+        response_data = {
+            "my_scores": my_scores,
+            "class_average": class_average,
+            "exam_titles": exam_titles
+        }
         return MyResponse.success(data=response_data)
