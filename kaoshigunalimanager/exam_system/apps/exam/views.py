@@ -174,7 +174,7 @@ class ExamModelViewSet(viewsets.ModelViewSet):
 
         try:
             exam_info = ExamInfoSerializer(instance=exam).data
-            print(exam_info)
+            # print(exam_info)
         except Exception as e:
             print(f"试卷序列化失败: {str(e)}")
             return MyResponse.failed(message=f"试卷获取失败: {str(e)}")
@@ -366,24 +366,24 @@ class ExamAvailableView(generics.ListAPIView):
             user_class = user_class.first()
 
             user_class_id = user_class.class_info.id
-            print(user_class_id)
+            # print(user_class_id)
 
             exam_list = exam_list.filter(Q(examclass__class_info__id=user_class_id) | Q(examclass__class_info__id=None))
             if not exam_list:
                 return MyResponse.success("没有考试内容")
-            print(exam_list)
+            # print(exam_list)
 
         # 判断试卷的时间是否结束
         valid_exam_list = []
-        # 前端做了限制，所以后端直接返回全部数据即可
-        # 判断用户是否为管理员如果是则返回所有试卷，如果是学生则返回有效的试卷
-        # if payload.get("role") not in ["teacher", "admin"]:
-        #     current_time = timezone.localtime()
-        #     for exam in exam_list:
-        #         if exam.end_time > current_time:
-        #             valid_exam_list.append(exam)
-        # else:
-        valid_exam_list = exam_list
+        # 过滤掉已经结束的考试
+        current_time = timezone.now()
+        for exam in exam_list:
+            if exam.end_time and exam.end_time > current_time:
+                valid_exam_list.append(exam)
+        
+        if not valid_exam_list:
+            return MyResponse.success("没有考试内容")
+        
         exam_ser_data = self.get_serializer(instance=valid_exam_list, many=True).data
         return MyResponse.success(data=exam_ser_data)
               
@@ -835,6 +835,7 @@ class ExamRecordStatisticsView(APIView):
 class GroupedExamRecordListView(APIView):
     @check_permission
     def get(self, request):
+        payload = request.user
         # 获取查询参数，添加错误处理
         try:
             page = int(request.GET.get('page', 1))
@@ -855,7 +856,9 @@ class GroupedExamRecordListView(APIView):
         
         # 构建查询条件
         queryset = Exam.objects.all()
-        
+        if payload.get("role") == "teacher":
+            queryset = queryset.filter(creator_id=payload.get("id"))
+
         if title:
             queryset = queryset.filter(title__icontains=title)
         if status:
@@ -1112,12 +1115,25 @@ class ExamReportGenerate(APIView):
     @check_permission
     def post(self, request, exam_id):
         payload = request.user
-        request_data = request.data
         # 判断试卷是否存在
         try:
             exam = Exam.objects.get(id=exam_id)
         except Exam.DoesNotExist:
             return MyResponse.failed(message="该试卷已不存在")
+
+        # 验证用户权限：只有管理员或试卷创建者可以生成报告
+        if payload.get("role") != "admin" and exam.creator_id != payload.get("id"):
+            return MyResponse.failed(message="无权限生成该试卷报告")
+
+        # 获取已阅卷的考试记录
+        exam_record = ExamRecord.objects.filter(
+            exam_id=exam_id,
+            status="graded"
+        ).select_related("user")
+
+        # 如果没有考试记录，返回提示
+        if not exam_record.exists():
+            return MyResponse.failed(message="该试卷暂无已阅卷的考试记录")
 
         response_data = {
             "report_id": exam_id,
@@ -1126,14 +1142,12 @@ class ExamReportGenerate(APIView):
             "generate_time": timezone.now().strftime("%Y-%m-%d %H:%M:%S"),
             "summary": {},
             "question_analysis": [],
+            "recommendations": [],
         }
 
         # 考试摘要统计
-        exam_record = ExamRecord.objects.filter(exam_id=exam_id, status="graded").select_related("user")
-        # 获取考试记录的人数
-        user_ids = [er.user.id for er in exam_record]
-        total_participants = len(set(user_ids))
-
+        # 使用 values_list 优化性能
+        total_participants = exam_record.values("user_id").distinct().count()
         response_data["summary"]["total_participants"] = total_participants
 
         # 获取考试的分数信息
@@ -1141,7 +1155,7 @@ class ExamReportGenerate(APIView):
             average_score=Avg("score"),
             highest_score=Max("score"),
             lowest_score=Min("score"),
-            pass_rate =  Avg(
+            pass_rate=Avg(
                 Case(
                     When(is_passed=1, then=1.0),
                     When(is_passed=0, then=0.0),
@@ -1150,17 +1164,82 @@ class ExamReportGenerate(APIView):
                 )
             )
         )
-        print(exam_score_state)
+
         response_data["summary"]["average_score"] = round(exam_score_state["average_score"] or 0, 2)
         response_data["summary"]["pass_rate"] = round(exam_score_state["pass_rate"] or 0, 2)
         response_data["summary"]["highest_score"] = round(exam_score_state["highest_score"] or 0, 2)
         response_data["summary"]["lowest_score"] = round(exam_score_state["lowest_score"] or 0, 2)
-        print(response_data)
 
         # 题目分析
+        try:
+            # 获取该试卷的所有题目信息
+            exam_questions = ExamQuestion.objects.filter(
+                exam_id=exam_id
+            ).select_related("question")
 
+            if not exam_questions.exists():
+                return MyResponse.failed(message="该试卷暂无题目")
 
-        return MyResponse.failed()
+            # 构建题目难度映射
+            question_difficulty = {
+                eq.question.id: eq.question.difficulty
+                for eq in exam_questions
+            }
+            exam_question_ids = list(question_difficulty.keys())
+
+            # 获取该试卷的考试记录id
+            exam_record_ids = list(exam_record.values_list("id", flat=True))
+
+            # 获取答案记录
+            answer_records = AnswerRecord.objects.filter(
+                exam_record_id__in=exam_record_ids,
+                question_id__in=exam_question_ids
+            )
+
+            if not answer_records.exists():
+                return MyResponse.failed(message="暂无答题记录")
+
+            # 统计每道题的正确率
+            question_answer_state = answer_records.values("question_id").annotate(
+                correct_rate=Avg(
+                    Case(
+                        When(is_correct=1, then=1.0),
+                        When(is_correct=0, then=0.0),
+                        default=None,
+                        output_field=FloatField()
+                    )
+                )
+            )
+
+            recommendations = []
+            for qas in question_answer_state:
+                qid = qas["question_id"]
+                qcr = round(qas["correct_rate"] or 0, 2)
+                qdl = question_difficulty.get(qid, "medium")
+
+                if qdl == "easy" and qcr < 0.8:
+                    recommendations.append(f"题目{qid}为简单难度题，正确率小于80%，建议加强知识点基础的讲解")
+                elif qdl == "medium" and qcr < 0.5:
+                    recommendations.append(f"题目{qid}为中等难度题，正确率小于50%，建议加强知识点的讲解")
+                elif qdl == "hard" and qcr < 0.3:
+                    recommendations.append(f"题目{qid}为困难难度题，正确率小于30%，建议加强知识点的讲解")
+
+                response_data["question_analysis"].append({
+                    "question_id": qid,
+                    "correct_rate": qcr,
+                    "difficulty_level": qdl
+                })
+
+            # 如果建议少于题目总数的25%，添加默认建议
+            if len(recommendations) < len(exam_question_ids) * 0.25:
+                recommendations.append("整体成绩良好，继续保持")
+
+            response_data["recommendations"] = recommendations
+
+        except Exception as e:
+            return MyResponse.failed(message=f"生成报告时出错：{str(e)}")
+
+        return MyResponse.success(data=response_data)
 
 
 class ExamReportExport(APIView):

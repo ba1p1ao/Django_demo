@@ -25,6 +25,7 @@ urlpatterns = [
     path("record/list/", views.ExamRecordListView.as_view()),
     path("record/<int:pk>/", views.ExamRecordDetailView.as_view()),
     path("<int:exam_id>/statistics/", views.ExamRecordStatisticsView.as_view()),
+
     # 考试列表分组
     path("grouped-records/", views.GroupedExamRecordListView.as_view()),
 
