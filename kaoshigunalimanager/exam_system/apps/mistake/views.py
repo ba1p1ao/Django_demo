@@ -1,12 +1,12 @@
 from rest_framework.views import APIView
-from django.db.models import Count, Max
+from django.db.models import Count, Max, Min
 from apps.question.models import Question
 from apps.user.models import User
 from apps.exam.models import AnswerRecord, ExamRecord
 from utils.ResponseMessage import check_auth, MyResponse
 
 
-class MistakeListView(APIView):
+class MistakeListWithStatisticsView(APIView):
     @check_auth
     def get(self, request):
         payload = request.user
@@ -36,12 +36,19 @@ class MistakeListView(APIView):
             "list": [],
             "page": page,
             "size": page_size,
-            "total": 0
+            "total": 0,
+            "statistics": {
+                "total_mistakes": 0,
+                "unique_questions": 0,
+                "type_distribution": {},
+                "category_distribution": {},
+                "recent_mistakes": [],
+            },
         }
         # 获取学生参加的考试id
         exam_record_ids = ExamRecord.objects.filter(
             user_id=user_id, status="graded"
-        ).values_list("exam_id", flat=True).distinct()
+        ).values_list("id", flat=True).distinct()
         # print(exam_record_ids)
         if not exam_record_ids:
             return MyResponse.success(message="暂时没有错误题目信息", data=response_data)
@@ -49,7 +56,7 @@ class MistakeListView(APIView):
         # 获取符合条件的，学生错误的题目
         answer_records = AnswerRecord.objects.filter(
             **filter_body,
-            exam_record__in=exam_record_ids,
+            exam_record_id__in=exam_record_ids,
             is_correct=0
         ).select_related("question", "exam_record__exam")
 
@@ -59,7 +66,7 @@ class MistakeListView(APIView):
         # 获取学生每一个题目的错误次数和最后一次错误时间
         mistake_stats = answer_records.values("question_id").annotate(
             mistake_count=Count("question_id"),
-            last_mistake_time=Max("update_time"),
+            last_mistake_time=Max("create_time"),
         ).order_by("-last_mistake_time")
 
         total = mistake_stats.count()
@@ -78,7 +85,7 @@ class MistakeListView(APIView):
         last_answer_records = {}
         for record in answer_records:
             qid = record.question_id
-            if qid not in last_answer_records or record.update_time > last_answer_records[qid].update_time:
+            if qid not in last_answer_records or record.create_time > last_answer_records[qid].create_time:
                 last_answer_records[qid] = record
 
         # 构建相应数据中的错误题目
@@ -100,11 +107,26 @@ class MistakeListView(APIView):
                 "correct_answer": question.answer,
                 "analysis": question.analysis,
                 "mistake_count": ms["mistake_count"],
-                "last_mistake_time": ms["last_mistake_time"],
+                "last_mistake_time": ms["last_mistake_time"].strftime("%Y-%m-%d %H:%M:%S"),
                 "exam_title": last_record.exam_record.exam.title if last_record.exam_record else ""
             }
             response_list.append(data)
 
         response_data["list"] = response_list
         response_data["total"] = total
+
+        # 获取统计信息
+        response_data["statistics"]["total_mistakes"] = answer_records.count()
+        response_data["statistics"]["unique_questions"] = total
+
+        for ms in mistake_stats:
+            qid = ms["question_id"]
+            question = question_map.get(qid)
+            response_data["statistics"]["type_distribution"][question.type] = response_data["statistics"]["type_distribution"].get(question.type, 0) + 1
+            response_data["statistics"]["category_distribution"][question.category] = response_data["statistics"]["category_distribution"].get(question.category, 0) + 1
+            response_data["statistics"]["recent_mistakes"].append({
+                "question_id": ms["question_id"],
+                "mistake_count": ms["mistake_count"],
+                "last_mistake_time": ms["last_mistake_time"].strftime("%Y-%m-%d %H:%M:%S"),
+            })
         return MyResponse.success(data=response_data)
