@@ -1,9 +1,12 @@
 from statistics import mean
+import os
 
 from rest_framework.views import APIView
 from rest_framework import viewsets, generics
 from django.db import transaction
 from django.db.models import Count, Avg, Case, When, FloatField, Q, Max, Min
+from django.http import FileResponse
+from django.conf import settings
 from apps.exam.models import Exam, ExamRecord, ExamQuestion, AnswerRecord, ExamClass
 from apps.user.models import User
 from apps.question.models import Question
@@ -11,6 +14,7 @@ from apps.classes.models import Class, UserClass
 from apps.exam.serializers import AnswersSerializer, ExamRecordListSerializer, ExamRecordDetailSerializer, ExamSerializer, ExamInfoSerializer, ExamRecordAddSerializer, GroupedExamSerializer
 from apps.question.serializers import QuestionListSerializers
 from utils.ResponseMessage import MyResponse, check_permission, check_auth # 添加认证的装饰器
+from utils.ReportPDF import ReportPDFGenerator
 from datetime import datetime
 from django.utils import timezone
 
@@ -1236,16 +1240,62 @@ class ExamReportGenerate(APIView):
 
             response_data["recommendations"] = recommendations
 
+            # 使用 ReportPDFGenerator 生成 PDF
+            pdf_generator = ReportPDFGenerator()
+            buffer = pdf_generator.generate_exam_report(
+                exam_title=exam.title,
+                summary=response_data["summary"],
+                question_analysis=response_data["question_analysis"],
+                recommendations=recommendations
+            )
+
+            # 保存 PDF 文件
+            filename = f"exam_{exam_id}_report.pdf"
+            pdf_generator.save_pdf(buffer, filename)
+
+            return MyResponse.success(data={
+                "report_id": exam_id,
+                "exam_id": exam_id,
+                "exam_title": exam.title,
+                "filename": filename,
+                "generate_time": timezone.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "message": "报告生成成功，可以点击导出下载"
+            })
+
         except Exception as e:
             return MyResponse.failed(message=f"生成报告时出错：{str(e)}")
-
-        return MyResponse.success(data=response_data)
 
 
 class ExamReportExport(APIView):
     @check_permission
     def get(self, request, exam_id):
+        payload = request.user
 
-        pass
+        # 验证权限
+        if payload.get("role") not in ["admin", "teacher"]:
+            return MyResponse.failed(message="无权限导出该试卷报告")
+
+        # 查找报告文件
+        report_dir = os.path.join(settings.BASE_DIR, 'static', 'report_pdfs')
+        if not os.path.exists(report_dir):
+            return MyResponse.failed(message="报告文件不存在")
+
+        # 获取该试卷的报告文件
+        files = [f for f in os.listdir(report_dir) if f.startswith(f"exam_{exam_id}_report")]
+        if not files:
+            return MyResponse.failed(message="该试卷暂无报告文件，请先生成报告")
+
+        # 按文件名排序，获取最新的
+        latest_file = sorted(files, reverse=True)[0]
+        filepath = os.path.join(report_dir, latest_file)
+
+        # 返回文件
+        try:
+            file_handle = open(filepath, 'rb')
+            response = FileResponse(file_handle, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="{latest_file}"'
+            return response
+        except Exception as e:
+            return MyResponse.failed(message=f"导出报告时出错：{str(e)}")
 
 
