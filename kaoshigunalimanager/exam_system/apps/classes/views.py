@@ -1,11 +1,10 @@
-from idlelib.rpc import response_queue
-
-from django.core.signals import request_started
 from django.db.models import Count, F, Q, Avg, Max, Min, Case, When, FloatField
+from django.utils import timezone
+from datetime import timedelta
 from rest_framework.views import APIView
 from apps.classes.serializers import ClassListSerializer
 from apps.classes.models import Class, UserClass
-from apps.exam.models import ExamRecord, Exam
+from apps.exam.models import ExamRecord, Exam, ExamClass
 from apps.user.models import User
 from utils.ResponseMessage import check_auth, check_permission, MyResponse
 
@@ -345,7 +344,7 @@ class ClassMembersAddView(APIView):
         ]
 
         created_objects = UserClass.objects.bulk_create(user_class_objects)
-        
+
         # 修改用户表的班级id
         User.objects.filter(id__in=[user.id for user in users_to_add]).update(class_id=class_id)
 
@@ -402,7 +401,7 @@ class ClassMembersRemoveView(APIView):
 
         # 批量删除
         deleted_count, _ = user_classes.delete()
-        
+
         # 修改用户表的班级id为null
         User.objects.filter(id__in=existing_user_ids).update(class_id=None)
 
@@ -453,7 +452,7 @@ class ClassExamRankingView(APIView):
         payload = request.user
 
         request_data = request.GET
-        print(request_data)
+        # print(request_data)
         exam_id = request_data.get("exam_id")
 
         page = int(request_data.get("page"))
@@ -493,7 +492,7 @@ class ClassExamRankingView(APIView):
         cur_exam_record = ExamRecord.objects.filter(exam_id=exam_id, user_id__in=cur_class_student_ids, status="graded").select_related("user")
         if not cur_exam_record.exists():
             return MyResponse.success(data=response_data)
-        print(cur_exam_record)
+        # print(cur_exam_record)
 
         # 获取这场考试该班级的平均成绩和通过率
         cur_exam_state = cur_exam_record.aggregate(
@@ -521,7 +520,7 @@ class ClassExamRankingView(APIView):
             )),
             submit_time=Max("examrecord__submit_time")
         ).values("id", "username", "nickname", "max_score", "avg_score", "pass_rate", "submit_time").order_by("-max_score")
-        print(user_score_list)
+        # print(user_score_list)
 
         rank_list = []
         for index, student in enumerate(user_score_list, 1):
@@ -547,5 +546,96 @@ class ClassExamRankingView(APIView):
         total = len(rank_list)
         rank_list_page = rank_list[offset:offset+page_size]
         response_data["list"] = rank_list_page
+
+        return MyResponse.success(data=response_data)
+
+
+
+class ClassScoreTrendView(APIView):
+    @check_permission
+    def get(self, request, class_id):
+        payload = request.user
+
+        request_data = request.GET
+
+        # 获取班级信息
+        class_obj = Class.objects.get(id=class_id)
+        response_data = {
+            "class_id": class_id,
+            "class_name": class_obj.name,
+            "total_exams": 0,
+            "average_score": 0,
+            "highest_average": 0,
+            "lowest_average": 0,
+            "pass_rate": 0,
+            "trend": [],
+        }
+        # 获取班级学生id
+        cur_class_students = User.objects.filter(
+            userclass__class_info_id=class_id,
+            role="student",
+            status=1
+        )
+        cur_class_student_ids = [s.id for s in cur_class_students]
+
+        # 获取该班级关联的day天前的试卷id
+        days = int(request_data.get("days", 7))
+        # 获取当前本地时间
+        current_time = timezone.localtime()
+        # 计算days天前的时间
+        days_ago_time = current_time - timedelta(days=days)
+
+        cur_class_exam = Exam.objects.filter(
+            status='published',
+            end_time__gte=days_ago_time,
+            examclass__class_info__id=class_id,
+        )
+        if not cur_class_exam.exists():
+            return MyResponse.success(data=response_data)
+        # 获取试卷id, 构建试卷映射
+        cur_class_exam_ids = [ce.id for ce in cur_class_exam]
+        cur_class_exam_map = {
+            ce.id: {
+                "date": ce.end_time.strftime("%Y-%m-%d %H:%M:%S"),
+                "exam_title": ce.title,
+            }
+            for ce in cur_class_exam
+        }
+        total_exams = cur_class_exam.count()
+        response_data["total_exams"] = total_exams
+        # 计算每一个试卷的平均分和及格率
+        class_exam_state = ExamRecord.objects.filter(exam_id__in=cur_class_exam_ids, status="graded").values("exam_id").annotate(
+            average_score=Avg("score"),
+            highest_score=Max("score"),
+            lowest_score=Min("score"),
+            pass_rate=Avg(Case(
+                When(is_passed=1, then=1.0),
+                When(is_passed=0, then=0.0),
+                default=None,
+                output_field=FloatField()
+            ))
+        )
+        average_score=0
+        highest_averag=0
+        lowest_average=0
+        pass_rate=0
+
+        for exam_state in class_exam_state:
+            average_score += exam_state["average_score"]
+            highest_averag += exam_state["highest_score"]
+            lowest_average += exam_state["lowest_score"]
+            pass_rate += exam_state["pass_rate"]
+            eid = exam_state["exam_id"]
+            response_data["trend"].append({
+                "date": cur_class_exam_map[eid]["date"],
+                "exam_title": cur_class_exam_map[eid]["exam_title"],
+                "average_score": exam_state["average_score"],
+                "pass_rate": exam_state["pass_rate"],
+            })
+
+        response_data["average_score"] = round(average_score / total_exams or 0, 2)
+        response_data["highest_averag"] =  round(highest_averag / total_exams or 0, 2)
+        response_data["lowest_average"] = round(lowest_average / total_exams or 0, 2)
+        response_data["pass_rate"] = round(pass_rate / total_exams or 0, 2)
 
         return MyResponse.success(data=response_data)

@@ -16,4 +16,5 @@ urlpatterns = [
 
     # 班级成绩排名
     path("<int:class_id>/exam-ranking/", views.ClassExamRankingView.as_view()),
+    path("<int:class_id>/score-trend/", views.ClassScoreTrendView.as_view()),
 ]
