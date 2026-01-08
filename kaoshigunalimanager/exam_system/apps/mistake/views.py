@@ -116,17 +116,29 @@ class MistakeListWithStatisticsView(APIView):
         response_data["total"] = total
 
         # 获取统计信息
-        response_data["statistics"]["total_mistakes"] = answer_records.count()
-        response_data["statistics"]["unique_questions"] = total
+        statistics = {
+            "total_mistakes": answer_records.count(),
+            "unique_questions": total,
+            "type_distribution": {},
+            "category_distribution": {},
+            "recent_mistakes": []
+        }
 
         for ms in mistake_stats:
             qid = ms["question_id"]
             question = question_map.get(qid)
-            response_data["statistics"]["type_distribution"][question.type] = response_data["statistics"]["type_distribution"].get(question.type, 0) + 1
-            response_data["statistics"]["category_distribution"][question.category] = response_data["statistics"]["category_distribution"].get(question.category, 0) + 1
-            response_data["statistics"]["recent_mistakes"].append({
+
+            # 跳过已删除的题目
+            if not question:
+                continue
+
+            statistics["type_distribution"][question.type] = statistics["type_distribution"].get(question.type, 0) + 1
+            statistics["category_distribution"][question.category] = statistics["category_distribution"].get(question.category, 0) + 1
+            statistics["recent_mistakes"].append({
                 "question_id": ms["question_id"],
                 "mistake_count": ms["mistake_count"],
                 "last_mistake_time": ms["last_mistake_time"].strftime("%Y-%m-%d %H:%M:%S"),
             })
+
+        response_data["statistics"] = statistics
         return MyResponse.success(data=response_data)

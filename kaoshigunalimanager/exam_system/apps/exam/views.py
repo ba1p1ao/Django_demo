@@ -368,10 +368,8 @@ class ExamAvailableView(generics.ListAPIView):
         user_class = UserClass.objects.filter(user_id=payload.get("id"))
         if user_class:
             user_class = user_class.first()
-
             user_class_id = user_class.class_info.id
             # print(user_class_id)
-
             exam_list = exam_list.filter(Q(examclass__class_info__id=user_class_id) | Q(examclass__class_info__id=None))
             if not exam_list:
                 return MyResponse.success("没有考试内容")
@@ -381,9 +379,25 @@ class ExamAvailableView(generics.ListAPIView):
         valid_exam_list = []
         # 过滤掉已经结束的考试
         current_time = timezone.now()
+        user_id = payload.get("id")
+
         for exam in exam_list:
-            if exam.end_time and exam.end_time > current_time:
-                valid_exam_list.append(exam)
+            # 检查考试是否已结束
+            if exam.end_time and exam.end_time <= current_time:
+                continue
+
+            # 检查是否允许重复作答
+            if exam.allow_retake == 0:
+                # 不允许重复作答，检查学生是否已完成
+                completed_record = ExamRecord.objects.filter(
+                    exam_id=exam.id,
+                    user_id=user_id,
+                    status__in=["submitted", "graded"]
+                ).exists()
+                if completed_record:
+                    continue
+
+            valid_exam_list.append(exam)
         
         if not valid_exam_list:
             return MyResponse.success("没有考试内容")

@@ -86,6 +86,24 @@ class StudentClassView(APIView):
         # 获取班主任姓名
         head_teacher_name = class_info.head_teacher.username if class_info.head_teacher else None
 
+        # 计算班级排名（基于平均分）
+        # 获取班级所有学生的平均分
+        from django.db.models import Avg
+        student_scores = ExamRecord.objects.filter(
+            user_id__in=students.values_list('user_id', flat=True),
+            status="graded"
+        ).values('user_id').annotate(
+            avg_score=Avg('score'),
+            exam_count=Count('id')
+        ).order_by('-avg_score')
+
+        # 计算当前学生的排名
+        my_rank = None
+        for idx, score_data in enumerate(student_scores, 1):
+            if score_data['user_id'] == user_id:
+                my_rank = idx
+                break
+
         response_data = {
             "id": class_info.id,
             "name": class_info.name,
@@ -93,6 +111,7 @@ class StudentClassView(APIView):
             "head_teacher_name": head_teacher_name,
             "student_count": student_count,
             "join_time": join_time,
+            "my_rank": my_rank,
         }
 
         return MyResponse.success(data=response_data)
