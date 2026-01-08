@@ -9,11 +9,13 @@ export const getMistakeList = (params) => {
   })
 }
 
-// 获取错题统计
-export const getMistakeStatistics = () => {
+// 获取错题列表和统计数据（合并接口）
+// 只需一次请求即可获取所有数据
+export const getMistakeListWithStatistics = (params) => {
   return request({
-    url: '/mistake/statistics/',
-    method: 'get'
+    url: '/mistake/list-with-statistics/',
+    method: 'get',
+    params
   })
 }
 
@@ -22,5 +24,14 @@ export const markMistakeAsMastered = (mistakeId) => {
   return request({
     url: `/mistake/${mistakeId}/mastered/`,
     method: 'put'
+  })
+}
+
+// 导出错题本
+export const exportMistakeQuestions = () => {
+  return request({
+    url: '/mistake/export/',
+    method: 'get',
+    responseType: 'blob'
   })
 }

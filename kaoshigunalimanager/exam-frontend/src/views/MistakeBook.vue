@@ -164,8 +164,7 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
-import { getMistakeList, getMistakeStatistics, markMistakeAsMastered } from '@/api/mistake'
-import { exportMistakeQuestions } from '@/api/import-export'
+import { getMistakeListWithStatistics, markMistakeAsMastered, exportMistakeQuestions } from '@/api/mistake'
 
 const userStore = useUserStore()
 const userInfo = computed(() => userStore.userInfo || {})
@@ -224,22 +223,24 @@ const loadData = async () => {
       size: pagination.size,
       ...searchForm
     }
-    const res = await getMistakeList(params)
+    const res = await getMistakeListWithStatistics(params)
+    
+    // 处理列表数据
     tableData.value = res.data.list || []
     pagination.total = res.data.total || 0
+    
+    // 处理统计数据
+    statistics.value = res.data.statistics || {
+      total_mistakes: 0,
+      unique_questions: 0,
+      type_distribution: {},
+      category_distribution: {},
+      recent_mistakes: []
+    }
   } catch (error) {
     console.error(error)
   } finally {
     loading.value = false
-  }
-}
-
-const loadStatistics = async () => {
-  try {
-    const res = await getMistakeStatistics()
-    statistics.value = res.data
-  } catch (error) {
-    console.error(error)
   }
 }
 
@@ -265,7 +266,6 @@ const handleMarkMastered = async (item) => {
     await markMistakeAsMastered(item.id)
     ElMessage.success('标记成功')
     loadData()
-    loadStatistics()
   } catch (error) {
     if (error !== 'cancel') {
       console.error(error)
@@ -312,7 +312,6 @@ onMounted(() => {
     return
   }
   loadData()
-  loadStatistics()
 })
 </script>
 

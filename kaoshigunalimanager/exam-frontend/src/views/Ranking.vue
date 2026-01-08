@@ -201,7 +201,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { Medal } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
-import { getAvailableExamList } from '@/api/exam'
+import { getAvailableExamList, getExamRecordList, getExamList } from '@/api/exam'
 import { getExamRanking } from '@/api/ranking'
 import { getStudentScoreTrend } from '@/api/ranking'
 import { getClassOptions } from '@/api/class'
@@ -256,8 +256,30 @@ const getRankingColor = (rank) => {
 
 const loadExamList = async () => {
   try {
-    const res = await getAvailableExamList()
-    examList.value = res.data || []
+    if (userInfo.value.role === 'student') {
+      // 学生：获取已参加的考试记录
+      const recordRes = await getExamRecordList({ page: 1, size: 1000 })
+      const takenExamIds = new Set()
+      const takenExams = []
+
+      if (recordRes.data && recordRes.data.list) {
+        recordRes.data.list.forEach(record => {
+          if (!takenExamIds.has(record.exam_id)) {
+            takenExamIds.add(record.exam_id)
+            takenExams.push({
+              id: record.exam_id,
+              title: record.exam_title
+            })
+          }
+        })
+      }
+
+      examList.value = takenExams
+    } else {
+      // 教师/管理员：获取所有已发布的考试
+      const res = await getExamList({ page: 1, size: 1000, status: 'published' })
+      examList.value = res.data.list || []
+    }
   } catch (error) {
     console.error(error)
   }
