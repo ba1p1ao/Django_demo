@@ -189,10 +189,14 @@ class ExamModelViewSet(viewsets.ModelViewSet):
     @check_permission
     def put(self, request, pk):
         payload = request.user
+
+        # 构建查询条件
+        query_filter = {"id": pk}
+        if payload.get("role") == "teacher":
+            query_filter["creator_id"] = payload.get("id")
+
         try:
-            exam = self.get_queryset().get(id=pk)
-            if payload.get("role") == "teacher":
-                exam = exam.filter(creator_id=payload.get("id"))
+            exam = self.get_queryset().get(**query_filter)
         except Exam.DoesNotExist:
             return MyResponse.failed(message="试卷不存在")
 

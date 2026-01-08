@@ -1,5 +1,5 @@
-# import pymysql
-# import time
+import pymysql
+import time
 
 # # 创建数据库连接
 # db = pymysql.connect(
@@ -152,3 +152,124 @@
 # #     df.to_excel(writer, sheet_name='Sheet2', index=False)
 
 
+#
+# ## 同步错题本表
+# # 创建数据库连接
+# db = pymysql.connect(
+#     host="localhost",  # 数据库主机地址
+#     user="root",  # 用户名
+#     password="123",  # 密码
+#     database="exam_system"  # 数据库名称
+# )
+#
+# # 创建游标对象
+# cursor = db.cursor()
+#
+# # 执行 SQL 查询
+# cursor.execute("""
+# select user.id as user_id, ar.question_id, ar.exam_record_id, ar.update_time from user
+# left join exam_record er on er.user_id = user.id
+# left join answer_record ar on ar.exam_record_id = er.id
+# where user.role = 'student' and ar.is_correct = 0
+# """)
+# desc = cursor.description
+# alldata = [dict(zip([col[0] for col in desc], row)) for row in cursor.fetchall()]
+# for a in alldata:
+#     print(a)
+#
+# user_mistake_map = {}
+# print(user_mistake_map)
+#
+# for data in alldata:
+#     if not user_mistake_map.get(data["user_id"]):
+#         user_mistake_map[data["user_id"]] = {
+#             data["question_id"]: {
+#                 "mistake_count": 1,
+#                 "exam_record_id": data["exam_record_id"],
+#                 "update_time": data["update_time"],
+#             }
+#         }
+#     else:
+#         if not user_mistake_map[data["user_id"]].get(data["question_id"]):
+#             user_mistake_map[data["user_id"]][data["question_id"]] = {
+#                 "mistake_count": 1,
+#                 "exam_record_id": data["exam_record_id"],
+#                 "update_time": data["update_time"],
+#             }
+#
+#         else:
+#             user_mistake_map[data["user_id"]][data["question_id"]]["mistake_count"] += 1
+#             user_mistake_map[data["user_id"]][data["question_id"]]["update_time"] = max(data["update_time"], user_mistake_map[data["user_id"]][data["question_id"]]["update_time"])
+#
+#
+# for user_id, v in user_mistake_map.items():
+#     for questioin_id, vv in v.items():
+#
+#         print(f"user_id: {user_id}, question_id: {questioin_id}, mistake_count: {vv['mistake_count']}, exam_record_id:{vv['exam_record_id']}, update_time:{vv['update_time']}")
+#
+#         update_sql = f"""
+#             insert into mistake (user_id, question_id, exam_record_id, mistake_count, last_mistake_time)
+#             values('{user_id}', '{questioin_id}', '{vv['exam_record_id']}', '{vv['mistake_count']}', '{vv['update_time']}')
+#             """
+#
+#         # 执行SQL语句
+#         cursor.execute(update_sql)
+#         # 提交到数据库执行
+#         db.commit()
+
+
+# print(user_mistake_map)
+
+
+
+
+# for data in alldata:
+#     user_mistake_map[data["user_id"]]["question"] =
+
+# 修改 以ABCD的方式返回
+# for data in alldata:
+#     if data["options"] and "[" == data["options"][0] and "]" == data["options"][-1]:
+#         newoptions = data["options"]
+#         ops = newoptions[1:-1].split(", ")
+#         print(data['answer'])
+#         newanswer = data['answer']
+#         ans = data['answer'].split(",")
+#         newanswerlist = []
+#         for i, op in enumerate(ops):
+#             # print(op, end="")
+#
+#             for a in ans:
+#                 if op[1:-1] == a:
+#                     newanswerlist.append(chr(i+ord('A')))
+#                     break
+#         print(newanswerlist)
+#         # newstr = f'"A": {ops[0]}, "B": {ops[1]}, "C": {ops[2]}, "D": {ops[3]}'
+#         newoptionsstr = '{"A": %s, "B": %s, "C": %s, "D": %s}' % (ops[0], ops[1], ops[2], ops[3])
+#         newanswerstr = newanswerlist.__str__().replace("'", '"')
+#         print(newoptionsstr, newanswerstr)
+
+        # update_sql = f"update question set options = '{newoptionsstr}', answer = '{newanswerstr}' where id = {data['id']}"
+        #
+        # # 执行SQL语句
+        # cursor.execute(update_sql)
+        # # 提交到数据库执行
+        # db.commit()
+
+# 修改answer 列表长度为1的时候直接返回字符
+
+# for data in alldata:
+#     if data["type"] in ["multiple"]:
+#         # if "," not in data["answer"] and '"' in data["answer"]:
+#         if '"' in data["answer"]:
+#             print(data["content"])
+#             print(data["answer"])
+#             new_answer = data["answer"].replace('"', '').replace('[', '').replace(']', '')
+#             print(new_answer)
+#             update_sql = f"update question set answer = '{new_answer}' where id = {data['id']}"
+#             # print(update_sql)
+#             # 执行SQL语句
+#             cursor.execute(update_sql)
+#             # 提交到数据库执行
+#             db.commit()
+# # 关闭连接
+# db.close()
