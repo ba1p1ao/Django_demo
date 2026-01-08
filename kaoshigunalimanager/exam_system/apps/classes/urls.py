@@ -13,4 +13,7 @@ urlpatterns = [
     path("<int:class_id>/members/add/", views.ClassMembersAddView.as_view()),
     path("<int:class_id>/members/remove/", views.ClassMembersRemoveView.as_view()),
     path("<int:class_id>/available-students/", views.ClassAvailableStudentsView.as_view()),
+
+    # 班级成绩排名
+    path("<int:class_id>/exam-ranking/", views.ClassExamRankingView.as_view()),
 ]

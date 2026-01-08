@@ -5,7 +5,7 @@ from django.db.models import Count, F, Q, Avg, Max, Min, Case, When, FloatField
 from rest_framework.views import APIView
 from apps.classes.serializers import ClassListSerializer
 from apps.classes.models import Class, UserClass
-from apps.exam.models import ExamRecord
+from apps.exam.models import ExamRecord, Exam
 from apps.user.models import User
 from utils.ResponseMessage import check_auth, check_permission, MyResponse
 
@@ -443,4 +443,109 @@ class ClassAvailableStudentsView(APIView):
                 "role": student.role,
                 "status": student.status
             })
+        return MyResponse.success(data=response_data)
+
+
+
+class ClassExamRankingView(APIView):
+    @check_permission
+    def get(self, request, class_id):
+        payload = request.user
+
+        request_data = request.GET
+        print(request_data)
+        exam_id = request_data.get("exam_id")
+
+        page = int(request_data.get("page"))
+        page_size = int(request_data.get("size"))
+        offset = (page - 1) * page_size
+        # 获取班级信息
+        class_obj = Class.objects.get(id=class_id)
+        response_data = {
+            "class_id": class_id,
+            "class_name": class_obj.name,
+            "exam_id": exam_id,
+            "exam_title": None,
+            "average_score": 0,
+            "pass_rate": 0,
+            "list": [],
+            "total": 0,
+            "page": page,
+            "size": page_size
+        }
+        # 判断考试信息是否存在
+        try:
+            exam = Exam.objects.get(id=exam_id)
+        except Exam.DoesNotExist:
+            return MyResponse.success(message="考试信息不存在", data=response_data)
+
+        response_data["exam_title"] = exam.title
+
+        # 获取班级学生id
+        cur_class_students = User.objects.filter(
+            userclass__class_info_id=class_id,
+            role="student",
+            status=1
+        )
+        cur_class_student_ids = [s.id for s in cur_class_students]
+
+        # 获取班级学生的这次考试记录信息
+        cur_exam_record = ExamRecord.objects.filter(exam_id=exam_id, user_id__in=cur_class_student_ids, status="graded").select_related("user")
+        if not cur_exam_record.exists():
+            return MyResponse.success(data=response_data)
+        print(cur_exam_record)
+
+        # 获取这场考试该班级的平均成绩和通过率
+        cur_exam_state = cur_exam_record.aggregate(
+            average_score=Avg("score"),
+            pass_rate=Avg(Case(
+                When(is_passed=1, then=1.0),
+                When(is_passed=0, then=0.0),
+                default=None,
+                output_field=FloatField()
+            ))
+        )
+
+        response_data["average_score"] = round(cur_exam_state["average_score"] or 0, 2)
+        response_data["pass_rate"] = round(cur_exam_state["pass_rate"] or 0, 2)
+
+        # 分组获取每一个学生的成绩信息
+        user_score_list = cur_class_students.filter(examrecord__exam_id=exam_id).annotate(
+            max_score=Max("examrecord__score"),
+            avg_score=Avg("examrecord__score"),
+            pass_rate=Avg(Case(
+                When(examrecord__is_passed=1, then=1.0),
+                When(examrecord__is_passed=0, then=0.0),
+                default=None,
+                output_field=FloatField()
+            )),
+            submit_time=Max("examrecord__submit_time")
+        ).values("id", "username", "nickname", "max_score", "avg_score", "pass_rate", "submit_time").order_by("-max_score")
+        print(user_score_list)
+
+        rank_list = []
+        for index, student in enumerate(user_score_list, 1):
+            # 获取最高分的考试记录，判断是否及格
+            best_record = ExamRecord.objects.filter(
+                exam_id=exam_id,
+                user_id=student["id"],
+                score=student["max_score"]
+            ).values("is_passed").first()
+
+            data = {
+                "rank": index,
+                "user_id": student["id"],
+                "username": student["username"],
+                "nickname": student["nickname"],
+                "score": round(student["max_score"], 2) if student["max_score"] is not None else 0,
+                "is_passed": best_record["is_passed"] if best_record else 0,
+                "submit_time": student["submit_time"].strftime("%Y-%m-%d %H:%M:%S") if student["submit_time"] else "",
+            }
+
+            rank_list.append(data)
+
+        total = len(rank_list)
+        rank_list_page = rank_list[offset:offset+page_size]
+        response_data["list"] = rank_list_page
+
         return MyResponse.success(data=response_data)
