@@ -31,13 +31,13 @@ class Mistake(models.Model):
         verbose_name='用户'
     )
     question = models.ForeignKey(
-        Question,  # 假设您的题目模型名为Question
+        Question,  # 题目模型
         on_delete=models.CASCADE,
         db_column="question_id",
         verbose_name='题目'
     )
     exam_record = models.ForeignKey(
-        ExamRecord,  # 假设您的考试记录模型名为ExamRecord
+        ExamRecord,  # 考试记录模型名
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -52,4 +52,4 @@ class Mistake(models.Model):
     update_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
 
     def __str__(self):
-        return f"错题记录 {self.id}: {self.user.username} - {self.question.title}"
+        return f"错题记录 {self.id}: {self.user.username} - {self.question.content}"

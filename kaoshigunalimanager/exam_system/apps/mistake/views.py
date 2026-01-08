@@ -3,9 +3,150 @@ from django.db.models import Count, Max, Min
 from apps.question.models import Question
 from apps.user.models import User
 from apps.exam.models import AnswerRecord, ExamRecord
+from apps.mistake.models import Mistake
 from utils.ResponseMessage import check_auth, MyResponse
 
 
+# # 没有使用错题本表实现，学生的错题统计
+# class MistakeListWithStatisticsView(APIView):
+#     @check_auth
+#     def get(self, request):
+#         payload = request.user
+#
+#         user_id = payload.get("id")
+#         # 判断用户是否存在
+#         try:
+#             student = User.objects.get(id=user_id)
+#         except User.DoesNotExist:
+#             return MyResponse.failed(message="学生信息不存在")
+#
+#         request_data = request.GET
+#
+#         page = int(request_data.get("page", 1))
+#         page_size = int(request_data.get("size", 10))
+#         offset = (page - 1) * page_size
+#         # 构建筛选条件
+#         filter_body = {}
+#         for k, v in request_data.items():
+#             if k in ["page", "size"]:
+#                 continue
+#             elif v:
+#                 filter_body[f"question__{k}__icontains"] = v
+#
+#         # 构建响应数据
+#         response_data = {
+#             "list": [],
+#             "page": page,
+#             "size": page_size,
+#             "total": 0,
+#             "statistics": {
+#                 "total_mistakes": 0,
+#                 "unique_questions": 0,
+#                 "type_distribution": {},
+#                 "category_distribution": {},
+#                 "recent_mistakes": [],
+#             },
+#         }
+#         # 获取学生参加的考试id
+#         exam_record_ids = ExamRecord.objects.filter(
+#             user_id=user_id, status="graded"
+#         ).values_list("id", flat=True).distinct()
+#         # print(exam_record_ids)
+#         if not exam_record_ids:
+#             return MyResponse.success(message="暂时没有错误题目信息", data=response_data)
+#
+#         # 获取符合条件的，学生错误的题目
+#         answer_records = AnswerRecord.objects.filter(
+#             **filter_body,
+#             exam_record_id__in=exam_record_ids,
+#             is_correct=0
+#         ).select_related("question", "exam_record__exam")
+#
+#         if not answer_records.exists():
+#             return MyResponse.success(message="暂时没有错误题目信息", data=response_data)
+#
+#         # 获取学生每一个题目的错误次数和最后一次错误时间
+#         mistake_stats = answer_records.values("question_id").annotate(
+#             mistake_count=Count("question_id"),
+#             last_mistake_time=Max("create_time"),
+#         ).order_by("-last_mistake_time")
+#
+#         total = mistake_stats.count()
+#         # 分页
+#         mistake_stats_page = mistake_stats[offset:offset + page_size]
+#         # 学生参加的考试中的错误题目的id
+#         question_ids = [ms["question_id"] for ms in mistake_stats_page]
+#         # print(question_ids)
+#
+#         # 获取错误题目的，题目信息
+#         correct_questions = Question.objects.filter(id__in=question_ids)
+#         question_map = {q.id: q for q in correct_questions}
+#         # print(correct_questions)
+#
+#         # 获取最后一次答题记录（用于获取用户答案和考试标题）
+#         last_answer_records = {}
+#         for record in answer_records:
+#             qid = record.question_id
+#             if qid not in last_answer_records or record.create_time > last_answer_records[qid].create_time:
+#                 last_answer_records[qid] = record
+#
+#         # 构建相应数据中的错误题目
+#         response_list = []
+#         for ms in mistake_stats_page:
+#             qid = ms["question_id"]
+#             question = question_map.get(qid)
+#             last_record = last_answer_records.get(qid)
+#             if not question or not last_record:
+#                 continue
+#             data = {
+#                 "id": len(response_list) + 1,
+#                 "question_id": question.id,
+#                 "type": question.type,
+#                 "category": question.category,
+#                 "content": question.content,
+#                 "options": question.options,
+#                 "user_answer": last_record.user_answer,
+#                 "correct_answer": question.answer,
+#                 "analysis": question.analysis,
+#                 "mistake_count": ms["mistake_count"],
+#                 "last_mistake_time": ms["last_mistake_time"].strftime("%Y-%m-%d %H:%M:%S"),
+#                 "exam_title": last_record.exam_record.exam.title if last_record.exam_record else ""
+#             }
+#             response_list.append(data)
+#
+#         response_data["list"] = response_list
+#         response_data["total"] = total
+#
+#         # 获取统计信息
+#         statistics = {
+#             "total_mistakes": answer_records.count(),
+#             "unique_questions": total,
+#             "type_distribution": {},
+#             "category_distribution": {},
+#             "recent_mistakes": []
+#         }
+#
+#         for ms in mistake_stats:
+#             qid = ms["question_id"]
+#             question = question_map.get(qid)
+#
+#             # 跳过已删除的题目
+#             if not question:
+#                 continue
+#
+#             statistics["type_distribution"][question.type] = statistics["type_distribution"].get(question.type, 0) + 1
+#             statistics["category_distribution"][question.category] = statistics["category_distribution"].get(question.category, 0) + 1
+#             statistics["recent_mistakes"].append({
+#                 "question_id": ms["question_id"],
+#                 "mistake_count": ms["mistake_count"],
+#                 "last_mistake_time": ms["last_mistake_time"].strftime("%Y-%m-%d %H:%M:%S"),
+#             })
+#
+#         response_data["statistics"] = statistics
+#         return MyResponse.success(data=response_data)
+
+
+# 使用错题本表实现，学生的错题
 class MistakeListWithStatisticsView(APIView):
     @check_auth
     def get(self, request):
@@ -45,100 +186,107 @@ class MistakeListWithStatisticsView(APIView):
                 "recent_mistakes": [],
             },
         }
-        # 获取学生参加的考试id
-        exam_record_ids = ExamRecord.objects.filter(
-            user_id=user_id, status="graded"
-        ).values_list("id", flat=True).distinct()
-        # print(exam_record_ids)
-        if not exam_record_ids:
-            return MyResponse.success(message="暂时没有错误题目信息", data=response_data)
 
-        # 获取符合条件的，学生错误的题目
-        answer_records = AnswerRecord.objects.filter(
-            **filter_body,
-            exam_record_id__in=exam_record_ids,
-            is_correct=0
-        ).select_related("question", "exam_record__exam")
+        # 获取用户的错题
+        user_mistakes = Mistake.objects.filter(
+            user_id=user_id, is_mastered=0, **filter_body
+        ).select_related("question", "exam_record__exam").order_by("-mistake_count")
+        # print(user_mistakes)
+        if not user_mistakes.exists():
+            return MyResponse.success(data=response_data)
 
-        if not answer_records.exists():
-            return MyResponse.success(message="暂时没有错误题目信息", data=response_data)
-
-        # 获取学生每一个题目的错误次数和最后一次错误时间
-        mistake_stats = answer_records.values("question_id").annotate(
-            mistake_count=Count("question_id"),
-            last_mistake_time=Max("create_time"),
-        ).order_by("-last_mistake_time")
-
-        total = mistake_stats.count()
-        # 分页
-        mistake_stats_page = mistake_stats[offset:offset + page_size]
-        # 学生参加的考试中的错误题目的id
-        question_ids = [ms["question_id"] for ms in mistake_stats_page]
-        # print(question_ids)
-
-        # 获取错误题目的，题目信息
-        correct_questions = Question.objects.filter(id__in=question_ids)
-        question_map = {q.id: q for q in correct_questions}
-        # print(correct_questions)
-
-        # 获取最后一次答题记录（用于获取用户答案和考试标题）
-        last_answer_records = {}
-        for record in answer_records:
-            qid = record.question_id
-            if qid not in last_answer_records or record.create_time > last_answer_records[qid].create_time:
-                last_answer_records[qid] = record
-
-        # 构建相应数据中的错误题目
-        response_list = []
-        for ms in mistake_stats_page:
-            qid = ms["question_id"]
-            question = question_map.get(qid)
-            last_record = last_answer_records.get(qid)
-            if not question or not last_record:
-                continue
-            data = {
-                "id": len(response_list) + 1,
-                "question_id": question.id,
-                "type": question.type,
-                "category": question.category,
-                "content": question.content,
-                "options": question.options,
-                "user_answer": last_record.user_answer,
-                "correct_answer": question.answer,
-                "analysis": question.analysis,
-                "mistake_count": ms["mistake_count"],
-                "last_mistake_time": ms["last_mistake_time"].strftime("%Y-%m-%d %H:%M:%S"),
-                "exam_title": last_record.exam_record.exam.title if last_record.exam_record else ""
-            }
-            response_list.append(data)
-
-        response_data["list"] = response_list
+        total = user_mistakes.count()
         response_data["total"] = total
+        # 分页
+        user_mistakes_page = user_mistakes[offset:offset + page_size]
+        # 获取当前页错题的题目ID和考试记录ID
+        mistakes_question_ids = [um.question.id for um in user_mistakes_page]
+        mistakes_exam_record_ids = list(set([um.exam_record.id for um in user_mistakes_page]))
+        # print(mistakes_question_ids, mistakes_exam_record_ids)
 
-        # 获取统计信息
+        # 获取学生答题记录
+        if mistakes_exam_record_ids and mistakes_question_ids:
+            all_answer_records = AnswerRecord.objects.filter(
+                exam_record_id__in=mistakes_exam_record_ids,
+                question_id__in=mistakes_question_ids,
+                is_correct=0
+            ).select_related("exam_record__exam").order_by("create_time")
+            # print(all_answer_records)
+            # 构建学生答题记录，学生答案和试卷title映射
+            answer_record_map = {}
+            for ar in all_answer_records:
+                qid = ar.question_id
+                if qid not in answer_record_map or ar.create_time > answer_record_map[qid]["create_time"]:
+                    answer_record_map[qid] = {
+                        "user_answer": ar.user_answer,
+                        "exam_title": ar.exam_record.exam.title if ar.exam_record and ar.exam_record.exam else "",
+                        "create_time": ar.create_time
+                    }
+        else:
+            answer_record_map = {}
+
+        # print(answer_record_map)
+        question_list = []
+
+        for um in user_mistakes_page:
+            if not um.question:
+                continue
+            question_id = um.question.id
+            mistake_count = um.mistake_count
+            last_mistake_time = um.last_mistake_time.strftime("%Y-%m-%d %H:%M:%S") if um.last_mistake_time else ""
+
+            # 获取用户答案和考试标题
+            answer_info = answer_record_map.get(question_id, {})
+            user_answer = answer_info.get("user_answer", "")
+            exam_title = answer_info.get("exam_title", "")
+            data = {
+                "id": um.id,
+                "question_id": question_id,
+                "type": um.question.type,
+                "category": um.question.category,
+                "content": um.question.content,
+                "options": um.question.options,
+                "user_answer": user_answer,
+                "correct_answer": um.question.answer,
+                "analysis": um.question.analysis,
+                "mistake_count": mistake_count,
+                "last_mistake_time": last_mistake_time,
+                "exam_title": exam_title,
+            }
+            question_list.append(data)
+
         statistics = {
-            "total_mistakes": answer_records.count(),
+            "total_mistakes": 0,
             "unique_questions": total,
             "type_distribution": {},
             "category_distribution": {},
-            "recent_mistakes": []
+            "recent_mistakes": [],
         }
-
-        for ms in mistake_stats:
-            qid = ms["question_id"]
-            question = question_map.get(qid)
-
-            # 跳过已删除的题目
-            if not question:
+        total_mistakes = 0
+        for um in user_mistakes:
+            if not um.question:
                 continue
 
-            statistics["type_distribution"][question.type] = statistics["type_distribution"].get(question.type, 0) + 1
-            statistics["category_distribution"][question.category] = statistics["category_distribution"].get(question.category, 0) + 1
+            total_mistakes += um.mistake_count
+
+            # 统计类型分布
+            q_type = um.question.type
+            statistics["type_distribution"][q_type] = statistics["type_distribution"].get(q_type, 0) + 1
+
+            # 统计分类分布
+            q_category = um.question.category
+            statistics["category_distribution"][q_category] = statistics["category_distribution"].get(q_category, 0) + 1
+            # 最近错误
+
+            last_mistake_time = um.last_mistake_time.strftime("%Y-%m-%d %H:%M:%S") if um.last_mistake_time else ""
             statistics["recent_mistakes"].append({
-                "question_id": ms["question_id"],
-                "mistake_count": ms["mistake_count"],
-                "last_mistake_time": ms["last_mistake_time"].strftime("%Y-%m-%d %H:%M:%S"),
+                "question_id": um.question.id,
+                "mistake_count": um.mistake_count,
+                "last_mistake_time": last_mistake_time
             })
 
+        statistics["total_mistakes"] = total_mistakes
+        # 错题题目id
+        response_data["list"] = question_list
         response_data["statistics"] = statistics
         return MyResponse.success(data=response_data)
