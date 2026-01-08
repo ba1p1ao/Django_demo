@@ -290,3 +290,23 @@ class MistakeListWithStatisticsView(APIView):
         response_data["list"] = question_list
         response_data["statistics"] = statistics
         return MyResponse.success(data=response_data)
+
+
+class MistakeMasteredView(APIView):
+    @check_auth
+    def put(self, request, mistake_id):
+        payload = request.user
+
+        if payload.get("role") != "student":
+            return MyResponse.failed(message="没有权限修改")
+        user_id = payload.get("id")
+        try:
+            mistake = Mistake.objects.get(id=mistake_id, user_id=user_id, is_mastered=0)
+        except Mistake.DoesNotExist:
+            return MyResponse.failed(message="错题信息不存在")
+
+        mistake.is_mastered = 1
+        mistake.save()
+
+        return MyResponse.success(message="标记成功")
+
