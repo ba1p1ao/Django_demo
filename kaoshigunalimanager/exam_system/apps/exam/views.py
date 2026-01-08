@@ -11,6 +11,7 @@ from apps.exam.models import Exam, ExamRecord, ExamQuestion, AnswerRecord, ExamC
 from apps.user.models import User
 from apps.question.models import Question
 from apps.classes.models import Class, UserClass
+from apps.mistake.models import Mistake
 from apps.exam.serializers import AnswersSerializer, ExamRecordListSerializer, ExamRecordDetailSerializer, ExamSerializer, ExamInfoSerializer, ExamRecordAddSerializer, GroupedExamSerializer
 from apps.question.serializers import QuestionListSerializers
 from utils.ResponseMessage import MyResponse, check_permission, check_auth # 添加认证的装饰器
@@ -628,6 +629,23 @@ class ExamSubmitView(APIView):
                         else:
                             answer_record.is_correct = 0
                             answer_record.score = 0
+                            # 添加到错题本中
+                            try:
+                                mistake = Mistake.objects.get(user_id=payload.get("id"), question_id=question.id)
+                                # 更新错题记录
+                                mistake.mistake_count += 1
+                                mistake.exam_record = exam_record
+                                mistake.last_mistake_time = timezone.now()
+                                mistake.save()
+                            except Mistake.DoesNotExist:
+                                # 创建新的错题记录
+                                Mistake.objects.create(
+                                    user_id=payload.get("id"),
+                                    question_id=question.id,
+                                    mistake_count=1,
+                                    exam_record=exam_record,
+                                    last_mistake_time=timezone.now()
+                                )
 
                         records_to_update.append(answer_record)
                     # 如果用户没有答题
@@ -641,6 +659,23 @@ class ExamSubmitView(APIView):
                                 score=0,
                             )
                         )
+                        # 未作答也视作为错题，添加到错题本中
+                        try:
+                            mistake = Mistake.objects.get(user_id=payload.get("id"), question_id=question.id)
+                            # 更新错题记录
+                            mistake.mistake_count += 1
+                            mistake.exam_record = exam_record
+                            mistake.last_mistake_time = timezone.now()
+                            mistake.save()
+                        except Mistake.DoesNotExist:
+                            # 创建新的错题记录
+                            Mistake.objects.create(
+                                user_id=payload.get("id"),
+                                question_id=question.id,
+                                mistake_count=1,
+                                exam_record=exam_record,
+                                last_mistake_time=timezone.now()
+                            )
 
                 # 批量创建未答题的记录
                 if records_to_create:
