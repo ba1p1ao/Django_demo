@@ -416,7 +416,7 @@ class MistakeExportView(APIView):
             excel_buffer = self.export_to_excel(question_list)
 
             # 返回文件供前端下载
-            filename = f"题目导出_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+            filename = f"错题本导出_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
             encoded_filename = quote(filename)
 
             response = FileResponse(
@@ -453,22 +453,24 @@ class MistakeExportView(APIView):
             frame['题目内容'].append(question["content"])
 
             if question.get("options") and question["type"] != 'judge':
-                frame['选项A'].append(question.get("options").get("A"))
-                frame['选项B'].append(question.get("options").get("B"))
-                frame['选项C'].append(question.get("options").get("C"))
-                frame['选项D'].append(question.get("options").get("D"))
+                frame['选项A'].append(question.get("options").get("A", ""))
+                frame['选项B'].append(question.get("options").get("B", ""))
+                frame['选项C'].append(question.get("options").get("C", ""))
+                frame['选项D'].append(question.get("options").get("D", ""))
             else:
-                frame['选项A'].append(None)
-                frame['选项B'].append(None)
-                frame['选项C'].append(None)
-                frame['选项D'].append(None)
+                frame['选项A'].append("")
+                frame['选项B'].append("")
+                frame['选项C'].append("")
+                frame['选项D'].append("")
 
             if question["type"] == "judge":
-                frame['学生答案'].append("正确" if question["user_answer"].upper() == "A" else "错误")
-                frame['正确答案'].append("正确" if question["correct_answer"].upper() == "A" else "错误")
+                user_answer = question.get("user_answer", "").upper()
+                correct_answer = question.get("correct_answer", "").upper()
+                frame['学生答案'].append("正确" if user_answer == "A" else ("错误" if user_answer == "B" else ""))
+                frame['正确答案'].append("正确" if correct_answer == "A" else ("错误" if correct_answer == "B" else ""))
             else:
-                frame['学生答案'].append(question["user_answer"])
-                frame['正确答案'].append(question["correct_answer"])
+                frame['学生答案'].append(question.get("user_answer", ""))
+                frame['正确答案'].append(question.get("correct_answer", ""))
 
             frame['题目解析'].append(question["analysis"])
             frame['错误次数'].append(question["mistake_count"])
