@@ -157,7 +157,7 @@
             <div class="section-title">班级成绩趋势</div>
             <el-form :inline="true">
               <el-form-item label="统计天数">
-                <el-select v-model="trendDays" placeholder="请选择" @change="loadClassScoreTrend">
+                <el-select v-model="trendDays" placeholder="请选择" @change="loadClassScoreTrend" style="width: 120px">
                   <el-option label="最近7天" :value="7" />
                   <el-option label="最近15天" :value="15" />
                   <el-option label="最近30天" :value="30" />
@@ -233,7 +233,7 @@ import {
   getClassExamRanking,
   getClassScoreTrend
 } from '@/api/class'
-import { getAvailableExamList } from '@/api/exam'
+import { getAvailableExamList, getExamList } from '@/api/exam'
 import * as echarts from 'echarts'
 
 const props = defineProps({
@@ -331,8 +331,8 @@ const loadStatistics = async () => {
 
 const loadExamList = async () => {
   try {
-    const res = await getAvailableExamList()
-    examList.value = res.data || []
+    const res = await getExamList({ page: 1, size: 1000, status: 'published' })
+    examList.value = res.data.list || []
   } catch (error) {
     console.error(error)
   }

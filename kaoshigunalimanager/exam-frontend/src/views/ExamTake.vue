@@ -123,7 +123,7 @@
           <el-button
             v-else
             type="success"
-            @click="handleSubmit"
+            @click="handleSubmit(false)"
             :loading="submitting"
           >
             提交试卷
@@ -291,8 +291,7 @@ const loadQuestions = async (startTime, duration) => {
 
       // 如果考试已结束，自动提交
       if (remainingTime.value <= 0) {
-        ElMessage.warning('考试时间已到，正在自动提交')
-        handleSubmit()
+        handleSubmit(true)
       }
     } else {
       remainingTime.value = examInfo.value.duration * 60
@@ -307,7 +306,7 @@ const startTimer = () => {
     remainingTime.value--
     if (remainingTime.value <= 0) {
       clearInterval(timer.value)
-      handleSubmit()
+      handleSubmit(true)
     }
   }, 1000)
 }
@@ -345,28 +344,42 @@ const saveCurrentAnswer = async () => {
   }
 }
 
-const handleSubmit = async () => {
+const handleSubmit = async (autoSubmit = false) => {
+  // 如果不是自动提交，显示确认框
+  if (!autoSubmit) {
+    try {
+      await ElMessageBox.confirm('确定要提交试卷吗？提交后无法修改！', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      })
+    } catch (error) {
+      if (error === 'cancel') {
+        return
+      }
+    }
+  }
+
+  submitting.value = true
+  clearInterval(timer.value)
+
   try {
-    await ElMessageBox.confirm('确定要提交试卷吗？提交后无法修改！', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
-
-    submitting.value = true
-    clearInterval(timer.value)
-
     // 先保存当前答案
     await saveCurrentAnswer()
 
     // 提交试卷
     await submitExam(examRecordId.value)
-    ElMessage.success('试卷提交成功')
+
+    if (autoSubmit) {
+      ElMessage.success('考试时间已到，试卷已自动提交')
+    } else {
+      ElMessage.success('试卷提交成功')
+    }
+
     router.push(`/exam-record/${examRecordId.value}`)
   } catch (error) {
-    if (error !== 'cancel') {
-      console.error(error)
-    }
+    console.error(error)
+    ElMessage.error('提交失败，请重试')
   } finally {
     submitting.value = false
   }
