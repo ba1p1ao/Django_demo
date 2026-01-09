@@ -310,3 +310,179 @@ class MistakeMasteredView(APIView):
 
         return MyResponse.success(message="标记成功")
 
+
+import pandas as pd
+import io
+from django.http import FileResponse
+from urllib.parse import quote
+
+# 题目类型映射常量
+QUESTION_TYPE_MAP = {
+    "single": "单选题",
+    "multiple": "多选题",
+    "judge": "判断题",
+    "fill": "填空题",
+}
+
+# 难度映射常量
+DIFFICULTY_MAP = {
+    "easy": "简单",
+    "medium": "中等",
+    "hard": "困难",
+}
+
+
+
+class MistakeExportView(APIView):
+    @check_auth
+    def post(self, request):
+        payload = request.user
+
+        if payload.get("role") != "student":
+            return MyResponse.failed(message="没有权限导出错题")
+
+        user_id = payload.get("id")
+        # 判断学生信息是否存在
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return MyResponse.failed(message="用户信息不存在")
+
+        # 获取学生的错题信息
+        user_mistakes = Mistake.objects.filter(
+            user_id=user_id, is_mastered=0
+        ).select_related("question", "exam_record__exam").order_by("-mistake_count")
+
+        if not user_mistakes.exists():
+            return MyResponse.failed(message="没有错题，无法导出")
+
+        # 获取当前页错题的题目ID和考试记录ID
+        mistakes_question_ids = [um.question.id for um in user_mistakes]
+        mistakes_exam_record_ids = list(set([um.exam_record.id for um in user_mistakes]))
+
+
+        # 获取学生答题记录
+        if mistakes_exam_record_ids and mistakes_question_ids:
+            all_answer_records = AnswerRecord.objects.filter(
+                exam_record_id__in=mistakes_exam_record_ids,
+                question_id__in=mistakes_question_ids,
+                is_correct=0
+            ).select_related("exam_record__exam").order_by("create_time")
+            # print(all_answer_records)
+            # 构建学生答题记录，学生答案和试卷title映射
+            answer_record_map = {}
+            for ar in all_answer_records:
+                qid = ar.question_id
+                if qid not in answer_record_map or ar.create_time > answer_record_map[qid]["create_time"]:
+                    answer_record_map[qid] = {
+                        "user_answer": ar.user_answer,
+                        "exam_title": ar.exam_record.exam.title if ar.exam_record and ar.exam_record.exam else "",
+                        "create_time": ar.create_time
+                    }
+        else:
+            answer_record_map = {}
+
+        # print(answer_record_map)
+        question_list = []
+
+        for um in user_mistakes:
+            if not um.question:
+                continue
+            question_id = um.question.id
+            mistake_count = um.mistake_count
+            last_mistake_time = um.last_mistake_time.strftime("%Y-%m-%d %H:%M:%S") if um.last_mistake_time else ""
+
+            # 获取用户答案和考试标题
+            answer_info = answer_record_map.get(question_id, {})
+            user_answer = answer_info.get("user_answer", "")
+            exam_title = answer_info.get("exam_title", "")
+            data = {
+                "question_id": question_id,
+                "type": um.question.type,
+                "category": um.question.category,
+                "content": um.question.content,
+                "options": um.question.options,
+                "user_answer": user_answer,
+                "correct_answer": um.question.answer,
+                "analysis": um.question.analysis,
+                "mistake_count": mistake_count,
+                "last_mistake_time": last_mistake_time,
+                "exam_title": exam_title,
+            }
+            question_list.append(data)
+
+        try:
+            # 使用内存流生成文件
+            excel_buffer = self.export_to_excel(question_list)
+
+            # 返回文件供前端下载
+            filename = f"题目导出_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+            encoded_filename = quote(filename)
+
+            response = FileResponse(
+                excel_buffer,
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+            response['Content-Disposition'] = f'attachment; filename*=UTF-8\'\'{encoded_filename}'
+            return response
+        except Exception as e:
+            return MyResponse.filed(f"导出文件是发生错误，{e}")
+
+
+
+    def export_to_excel(self, questions):
+        frame = {
+            "题目类型": [],
+            "题目分类": [],
+            "题目内容": [],
+            "选项A": [],
+            "选项B": [],
+            "选项C": [],
+            "选项D": [],
+            "学生答案": [],
+            "正确答案": [],
+            "题目解析": [],
+            "错误次数": [],
+            "最后一次错误时间": [],
+            "试卷题目": [],
+        }
+
+        for question in questions:
+            frame['题目类型'].append(QUESTION_TYPE_MAP.get(question["type"]))
+            frame['题目分类'].append(question["category"])
+            frame['题目内容'].append(question["content"])
+
+            if question.get("options") and question["type"] != 'judge':
+                frame['选项A'].append(question.get("options").get("A"))
+                frame['选项B'].append(question.get("options").get("B"))
+                frame['选项C'].append(question.get("options").get("C"))
+                frame['选项D'].append(question.get("options").get("D"))
+            else:
+                frame['选项A'].append(None)
+                frame['选项B'].append(None)
+                frame['选项C'].append(None)
+                frame['选项D'].append(None)
+
+            if question["type"] == "judge":
+                frame['学生答案'].append("正确" if question["user_answer"].upper() == "A" else "错误")
+                frame['正确答案'].append("正确" if question["correct_answer"].upper() == "A" else "错误")
+            else:
+                frame['学生答案'].append(question["user_answer"])
+                frame['正确答案'].append(question["correct_answer"])
+
+            frame['题目解析'].append(question["analysis"])
+            frame['错误次数'].append(question["mistake_count"])
+            frame['最后一次错误时间'].append(question["last_mistake_time"])
+            frame['试卷题目'].append(question["exam_title"])
+
+        # 创建 DataFrame
+        df = pd.DataFrame(frame)
+
+        # 使用内存流代替临时文件
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='错题列表', index=False)
+
+        # 重置指针到开头
+        output.seek(0)
+        return output
