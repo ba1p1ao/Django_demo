@@ -276,14 +276,33 @@ const handleMarkMastered = async (item) => {
 const handleExport = async () => {
   try {
     const res = await exportMistakeQuestions()
-    const blob = new Blob([res], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `错题本_${new Date().getTime()}.xlsx`
-    link.click()
-    window.URL.revokeObjectURL(url)
-    ElMessage.success('导出成功')
+
+    // 检查响应是否是有效的 Excel 文件
+    // 如果响应类型是 application/json，说明后端返回了错误信息
+    if (res.type === 'application/json') {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const errorData = JSON.parse(e.target.result)
+        ElMessage.error(errorData.message || '导出失败')
+      }
+      reader.readAsText(res)
+      return
+    }
+
+    // 只有当响应是 Excel 文件时才下载
+    if (res.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+        res.type === 'application/octet-stream') {
+      const blob = new Blob([res], { type: res.type })
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `错题本_${new Date().getTime()}.xlsx`
+      link.click()
+      window.URL.revokeObjectURL(url)
+      ElMessage.success('导出成功')
+    } else {
+      ElMessage.error('导出失败：响应格式不正确')
+    }
   } catch (error) {
     console.error(error)
     ElMessage.error('导出失败')

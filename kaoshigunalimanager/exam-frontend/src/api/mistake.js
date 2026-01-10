@@ -31,7 +31,7 @@ export const markMistakeAsMastered = (mistakeId) => {
 export const exportMistakeQuestions = () => {
   return request({
     url: '/mistake/export/',
-    method: 'get',
+    method: 'post',
     responseType: 'blob'
   })
 }
