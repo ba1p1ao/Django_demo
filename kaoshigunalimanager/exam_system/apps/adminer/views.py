@@ -28,6 +28,7 @@ class UserListView(APIView):
 
         payload = request.user
         request_data = request.GET
+
         # 设置过滤参数
         filter_body = {}
         class_id = None
@@ -130,12 +131,12 @@ class UserInfoView(APIView):
     @check_permission
     def get(self, request, user_id):
         payload = request.user
-        
+
         try:
             user = User.objects.get(id=user_id)
         except User.DoesNotExist:
             return MyResponse.failed(message="用户信息不存在")
-        
+
         ser_user_data = UserSerializers(instance=user).data
         try:
             exam_count = Exam.objects.filter(creator_id=user_id).count()
@@ -145,23 +146,58 @@ class UserInfoView(APIView):
             ser_user_data["exam_count"] = exam_count
             ser_user_data["question_count"] = question_count
             ser_user_data["record_count"] = record_count
-            
+
             return MyResponse.success(data=ser_user_data)
         except Exception as e:
+            logger.error(f"获取用户详情失败，用户ID: {user_id}，错误: {e}")
             return MyResponse.failed(f"获取数据出错，{e}")
     
     
     @check_permission
     def delete(self, request, user_id):
         payload = request.user
+        admin_username = payload.get("username")
 
         if user_id == payload.get("id"):
             return MyResponse.failed(message="不能删除自己")
 
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return MyResponse.failed(message="用户不存在")
+
+        # 检查用户是否有考试记录
+        exam_record_count = ExamRecord.objects.filter(user_id=user_id).count()
+        if exam_record_count > 0:
+            return MyResponse.failed(message=f"该用户有 {exam_record_count} 条考试记录，无法删除")
+
+        # 检查用户是否是班主任
+        from apps.classes.models import Class
+        head_teacher_classes = Class.objects.filter(head_teacher_id=user_id).count()
+        if head_teacher_classes > 0:
+            return MyResponse.failed(message=f"该用户是 {head_teacher_classes} 个班级的班主任，无法删除")
+
+        # 检查用户创建的试卷数量
+        exam_count = Exam.objects.filter(creator_id=user_id).count()
+        if exam_count > 0:
+            return MyResponse.failed(message=f"该用户创建了 {exam_count} 个试卷，无法删除")
+
+        # 检查用户创建的题目数量
+        question_count = Question.objects.filter(creator_id=user_id).count()
+        if question_count > 0:
+            return MyResponse.failed(message=f"该用户创建了 {question_count} 道题目，无法删除")
+
+        # 删除用户的班级关联
+        from apps.classes.models import UserClass
+        UserClass.objects.filter(user_id=user_id).delete()
+
+        # 删除用户
         delete_count = User.objects.filter(id=user_id).delete()
         if not delete_count:
+            logger.error(f"删除用户失败，用户ID: {user_id}，用户名: {user.username}")
             return MyResponse.failed("用户删除失败")
-        logger.info(f"管理员 {payload.get('username')} 删除用户成功，用户ID: {user_id}")
+
+        logger.info(f"管理员 {admin_username} 删除用户: {user.username} (ID: {user_id})")
         return MyResponse.success("用户删除成功")
 
 
@@ -169,15 +205,26 @@ class UserUpdateStatusView(APIView):
     @check_permission
     def put(self, request, user_id):
         payload = request.user
+        admin_username = payload.get("username")
+
         if user_id == payload.get("id"):
             return MyResponse.failed(message="当前状态下不能修改自己的状态")
 
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return MyResponse.failed(message="用户不存在")
+
+        old_status = user.status
         status = request.data.get("status", 0)
+        status_text = "正常" if status == 1 else "禁用"
 
         update_count = User.objects.filter(id=user_id).update(status=status)
         if not update_count:
+            logger.error(f"修改用户状态失败，用户ID: {user_id}，用户名: {user.username}")
             return MyResponse.failed(message="修改用户状态失败")
-        logger.info(f"管理员 {payload.get('username')} 修改用户状态成功，用户ID: {user_id}，状态: {status}")
+
+        logger.info(f"管理员 {admin_username} 修改用户状态: {user.username} -> {status_text}")
         return MyResponse.success("修改用户状态成功")
 
 
@@ -185,15 +232,26 @@ class UserUpdateRoleView(APIView):
     @check_permission
     def put(self, request, user_id):
         payload = request.user
+        admin_username = payload.get("username")
+
         if user_id == payload.get("id"):
             return MyResponse.failed(message="当前状态下不能修改自己的角色")
 
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return MyResponse.failed(message="用户不存在")
+
+        old_role = user.role
         role = request.data.get("role", 0)
+        role_map = {'student': '学生', 'teacher': '教师', 'admin': '管理员'}
 
         update_count = User.objects.filter(id=user_id).update(role=role)
         if not update_count:
+            logger.error(f"修改用户角色失败，用户ID: {user_id}，用户名: {user.username}")
             return MyResponse.failed(message="修改用户角色失败")
-        logger.info(f"管理员 {payload.get('username')} 修改用户角色成功，用户ID: {user_id}，角色: {role}")
+
+        logger.info(f"管理员 {admin_username} 修改用户角色: {user.username} -> {role_map.get(role, role)}")
         return MyResponse.success("修改用户角色成功")
     
     
