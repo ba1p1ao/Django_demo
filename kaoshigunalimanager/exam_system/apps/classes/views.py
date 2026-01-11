@@ -1,3 +1,4 @@
+import logging
 from django.db.models import Count, F, Q, Avg, Max, Min, Case, When, FloatField
 from django.utils import timezone
 from datetime import timedelta
@@ -7,6 +8,8 @@ from apps.classes.models import Class, UserClass
 from apps.exam.models import ExamRecord, Exam, ExamClass
 from apps.user.models import User
 from utils.ResponseMessage import check_auth, check_permission, MyResponse
+
+logger = logging.getLogger('apps')
 
 
 class ClassOptionView(APIView):
@@ -104,8 +107,10 @@ class ClassCreateView(APIView):
             create_user_class = UserClass.objects.create(user=user_teacher, class_info=create_class)
             # 修改用户表中的class_id
             User.objects.filter(id=user_teacher.id).update(class_id=create_class.id)
+            logger.info(f"用户 {payload.get('username')} 创建班级成功: {create_class.name}")
             return MyResponse.success(message="班级添加成功")
         except Exception as e:
+            logger.error(f"用户 {payload.get('username')} 创建班级失败: {e}")
             return MyResponse.failed(message=f"添加班级错误，{e}")
 
 
@@ -122,7 +127,7 @@ class ClassView(APIView):
         if not update_class:
             return MyResponse.failed(message="班级信息不存在")
 
-
+        logger.info(f"用户 {payload.get('username')} 更新班级成功，班级ID: {class_id}")
         return MyResponse.success(message="修改成功")
 
     @check_permission
@@ -134,10 +139,12 @@ class ClassView(APIView):
             # 删除班级，由于 UserClass 的 on_delete=CASCADE，会自动删除关联的学生班级记录
             class_obj.delete()
 
+            logger.info(f"用户 {payload.get('username')} 删除班级成功: {class_obj.name}")
             return MyResponse.success(message="删除成功")
         except Class.DoesNotExist:
             return MyResponse.failed(message="班级信息不存在")
         except Exception as e:
+            logger.error(f"用户 {payload.get('username')} 删除班级失败: {str(e)}")
             return MyResponse.failed(message=f"删除失败: {str(e)}")
 
 
@@ -356,6 +363,7 @@ class ClassMembersAddView(APIView):
             "failed_list": [{"user_id": uid, "reason": "用户已在班级中"} for uid in failed_ids]
         }
 
+        logger.info(f"用户 {payload.get('username')} 添加班级成员成功，班级: {class_obj.name}，成功: {len(created_objects)}，失败: {len(failed_ids)}")
         return MyResponse.success(data=response_data)
 
 
@@ -414,6 +422,7 @@ class ClassMembersRemoveView(APIView):
             "failed_list": [{"user_id": uid, "reason": "用户不在班级中"} for uid in failed_ids]
         }
 
+        logger.info(f"用户 {payload.get('username')} 移除班级成员成功，班级: {class_obj.name}，成功: {deleted_count}，失败: {len(failed_ids)}")
         return MyResponse.success(data=response_data)
 
 
