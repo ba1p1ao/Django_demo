@@ -56,7 +56,6 @@ class ScoreTrendView(APIView):
             "pass_rate": stats.get("pass_rate"),
             "trend": trend_list
         }
-        # print(response_data)
 
         return MyResponse.success(data=response_data)
 
@@ -131,7 +130,6 @@ class StudentScoreComparisonView(APIView):
         exam_records = ExamRecord.objects.filter(user_id=user_id, status="graded").values("exam_id").annotate(
             max_score=Max("score")
         ).order_by("exam_id")
-        # print(exam_records)
 
         # 初始化相应数据
         response_data = {
@@ -146,7 +144,6 @@ class StudentScoreComparisonView(APIView):
         exam_ids = [er["exam_id"] for er in exam_records]
         # 获取用户所在班级的所有学生
         class_student_ids = User.objects.filter(class_id=user.class_id, role="student").values_list("id", flat=True)
-        # print(class_student_ids)
 
         # 如果班级只有自己
         if len(class_student_ids) == 1:
@@ -160,7 +157,6 @@ class StudentScoreComparisonView(APIView):
         cur_class_student_exam_record = ExamRecord.objects.filter(
             exam_id__in=exam_ids, user_id__in=class_student_ids, status="graded"
         )
-        # print(cur_class_student_exam_record)
 
         # 计算每个考试的班级平均分
         class_avg_scores = cur_class_student_exam_record.values("exam_id", "exam__title").annotate(

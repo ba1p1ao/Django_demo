@@ -106,7 +106,6 @@ class QuestionInfoView(RetrieveAPIView, UpdateAPIView, DestroyAPIView):
             return payload
         question = self.get_object()
         ser_data = self.get_serializer(instance=question).data
-        # print(ser_data)
         return MyResponse.success(data=ser_data)
 
     def update(self, request, *args, **kwargs):
@@ -159,7 +158,6 @@ class QuestionAddView(CreateAPIView):
                 return MyResponse.success(message='添加成功', data={"id": payload.get("id")})
         except Exception as e:
             logger.error(f"用户 {payload.get('username')} 添加题目失败: {e}")
-            print(e)
             return MyResponse.failed(message=e)
 
 
@@ -178,7 +176,6 @@ class QuestionDeleteListView(APIView):
             return MyResponse.other(code=404, message="请选择要删除的题目")
 
         delete_count = Question.objects.filter(id__in=ids).delete()
-        # print(delete_count)
         if delete_count:
             logger.info(f"用户 {payload.get('username')} 批量删除题目成功，数量: {len(ids)}")
             return MyResponse.success(message="批量删除成功")
@@ -305,7 +302,7 @@ class QuestionExportView(APIView):
             return response
         except Exception as e:
             logger.error(f"用户 {request.user.get('username')} 导出题目失败: {e}")
-            return MyResponse.filed(f"到处文件是发生错误，{e}")
+            return MyResponse.failed(f"到处文件是发生错误，{e}")
     
     
     def export_to_excel(self, questions):

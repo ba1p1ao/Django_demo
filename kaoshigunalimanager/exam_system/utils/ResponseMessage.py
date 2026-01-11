@@ -16,21 +16,21 @@ from django.http import JsonResponse
 class MyResponse:
     @staticmethod
     def success(message='请求成功', data=None):
-        response_dta = {
+        response_data = {
             "code": 200,
             "message": message,
             "data": data
         }
-        return JsonResponse(response_dta, safe=False)
+        return JsonResponse(response_data, safe=False)
 
     @staticmethod
     def failed(message='不存在', data=None):
-        response_dta = {
+        response_data = {
             "code": 404,
             "message": message,
             "data": data
         }
-        return JsonResponse(response_dta, safe=False)
+        return JsonResponse(response_data, safe=False)
 
     @staticmethod
     def other(code=500, message="服务器内部错误", data=None):

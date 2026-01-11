@@ -184,9 +184,7 @@ class ExamModelViewSet(viewsets.ModelViewSet):
 
         try:
             exam_info = ExamInfoSerializer(instance=exam).data
-            # print(exam_info)
         except Exception as e:
-            print(f"试卷序列化失败: {str(e)}")
             return MyResponse.failed(message=f"试卷获取失败: {str(e)}")
 
         return MyResponse.success(data=exam_info)

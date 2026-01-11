@@ -28,7 +28,6 @@ class ClassOptionView(APIView):
                 "grade": c.grade
             })
 
-        # print(response_data)
         return MyResponse.success(data=response_data)
 
 
@@ -53,7 +52,6 @@ class ClassListView(APIView):
         classes = Class.objects.filter(**filter_body).annotate(
             student_count=Count("userclass__user")
         )
-        # print(classes)
         if not classes:
             return MyResponse.failed(message="当前没有班级信息")
 
@@ -434,7 +432,6 @@ class ClassAvailableStudentsView(APIView):
 
         # 获取未添加班级的学生或老师
         students = User.objects.filter(~Q(role="admin"), class_id=None)
-        print(students)
 
         # 获取筛选字段后的学生信息
         keyword = request.GET.get("keyword", "")
@@ -643,7 +640,7 @@ class ClassScoreTrendView(APIView):
             })
 
         response_data["average_score"] = round(average_score / total_exams or 0, 2)
-        response_data["highest_averag"] =  round(highest_averag / total_exams or 0, 2)
+        response_data["highest_average"] =  round(highest_average / total_exams or 0, 2)
         response_data["lowest_average"] = round(lowest_average / total_exams or 0, 2)
         response_data["pass_rate"] = round(pass_rate / total_exams or 0, 2)
 

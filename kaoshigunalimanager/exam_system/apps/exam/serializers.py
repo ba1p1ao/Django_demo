@@ -133,8 +133,6 @@ class ExamRecordDetailSerializer(serializers.ModelSerializer):
                 data["is_correct"] = user_answer.is_correct
                 data["score"] = user_answer.score
             answers.append(data)
-            # print(data)
-        # ser_answers_data = AnswersSerializer(instance=answers, many=True).data
         return answers
     
     start_time = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", required=False, allow_null=True)

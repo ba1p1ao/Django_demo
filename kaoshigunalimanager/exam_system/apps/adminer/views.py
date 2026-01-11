@@ -137,7 +137,6 @@ class UserInfoView(APIView):
             return MyResponse.failed(message="用户信息不存在")
         
         ser_user_data = UserSerializers(instance=user).data
-        # print(ser_user_data)
         try:
             exam_count = Exam.objects.filter(creator_id=user_id).count()
             question_count = Question.objects.filter(creator_id=user_id).count()

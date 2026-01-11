@@ -36,10 +36,8 @@ class ReportPDFGenerator:
                 try:
                     pdfmetrics.registerFont(TTFont('ChineseFont', font_path))
                     font_registered = True
-                    print(f"成功注册中文字体: {font_path}")
                     break
                 except Exception as e:
-                    print(f"尝试注册字体 {font_path} 失败: {e}")
                     continue
 
         if not font_registered:
@@ -49,13 +47,12 @@ class ReportPDFGenerator:
                 try:
                     pdfmetrics.registerFont(TTFont('ChineseFont', project_font_path))
                     font_registered = True
-                    print(f"成功注册项目中文字体: {project_font_path}")
                 except Exception as e:
-                    print(f"尝试注册项目中文字体失败: {e}")
+                    pass
 
         if not font_registered:
             # 如果都找不到，使用 ASCII 字符替代（会有警告）
-            print("警告：未找到中文字体，PDF 中的中文可能显示为方块")
+            pass
 
     def _setup_custom_styles(self):
         """设置自定义样式"""
