@@ -1,3 +1,4 @@
+import logging
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import authentication_classes, permission_classes
@@ -7,6 +8,8 @@ from apps.user.serializers import UserSerializers, UserUpdateSerializer
 from utils.ResponseMessage import MyResponse
 from utils.PasswordEncode import verify_password, hash_password
 from utils.JWTAuth import create_token
+
+logger = logging.getLogger('apps')
 
 
 class UserLoginView(APIView):
@@ -21,14 +24,17 @@ class UserLoginView(APIView):
         try:
             user = User.objects.get(username=username)
         except User.DoesNotExist:
+            logger.warning(f"登录失败: 用户名 {username} 不存在")
             return MyResponse.failed("用户名或密码错误")
 
         if not verify_password(password, user.password):
+            logger.warning(f"登录失败: 用户 {username} 密码错误")
             return MyResponse.failed("用户名或密码错误")
 
         user_info = UserSerializers(instance=user).data
         token = create_token(payload=user_info, timeout=JWT_EXPIRE_TIME)
 
+        logger.info(f"用户 {username} 登录成功")
         return MyResponse.success(message="登录成功", data={
             'token': token,
             'user_info': user_info
@@ -74,14 +80,17 @@ class UserRegisterView(APIView):
 
         # 检查用户名是否已存在
         if User.objects.filter(username=username).exists():
+            logger.warning(f"注册失败: 用户名 {username} 已存在")
             return MyResponse.failed("该用户已存在")
 
         user_serializer = UserSerializers(data=request.data)
 
         if user_serializer.is_valid():
             user_serializer.save()
+            logger.info(f"用户 {username} 注册成功，角色: {role}")
             return MyResponse.success(message="注册成功", data={"id": user_serializer.data.get("id")})
 
+        logger.error(f"注册失败: {user_serializer.errors}")
         return MyResponse.failed(message="注册失败", data=user_serializer.errors)
 
 
@@ -100,13 +109,16 @@ class UserUpdateView(APIView):
         try:
             user = User.objects.get(id=user_id)
         except User.DoesNotExist:
+            logger.error(f"更新失败: 用户 ID {user_id} 不存在")
             return MyResponse.failed(message="用户不存在")
 
         user_ser = UserUpdateSerializer(instance=user, data=request.data, partial=True)
         if user_ser.is_valid():
             user_ser.save()
+            logger.info(f"用户 {user.username} 信息更新成功")
             return MyResponse.success(message="更新成功")
 
+        logger.error(f"用户 {user.username} 信息更新失败: {user_ser.errors}")
         return MyResponse.failed(message="更新失败", data=user_ser.errors)
 
 
@@ -125,6 +137,7 @@ class UserPasswordView(APIView):
         try:
             user = User.objects.get(id=user_id)
         except User.DoesNotExist:
+            logger.error(f"密码修改失败: 用户 ID {user_id} 不存在")
             return MyResponse.failed(message="用户不存在")
 
         old_password = request.data.get("old_password")
@@ -136,11 +149,13 @@ class UserPasswordView(APIView):
 
         # 验证原密码
         if not verify_password(old_password, user.password):
+            logger.warning(f"密码修改失败: 用户 {user.username} 原密码不正确")
             return MyResponse.failed(message="原密码不正确")
 
         # 更新密码
         user.password = hash_password(new_password)
         user.save()
 
+        logger.info(f"用户 {user.username} 密码修改成功")
         return MyResponse.success(message="密码修改成功")
 
