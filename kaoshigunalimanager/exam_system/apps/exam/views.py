@@ -1,3 +1,4 @@
+import logging
 from statistics import mean
 import os
 
@@ -18,6 +19,8 @@ from utils.ResponseMessage import MyResponse, check_permission, check_auth # 添
 from utils.ReportPDF import ReportPDFGenerator
 from datetime import datetime
 from django.utils import timezone
+
+logger = logging.getLogger('apps')
 
 
 
@@ -131,7 +134,7 @@ class ExamAddView(APIView):
                     'creator': user,
                 }
                 exam = Exam.objects.create(**exam_data)
-                
+
                 # 验证题目是否存在
                 db_questions = Question.objects.filter(id__in=question_ids)
                 if db_questions.count() != len(question_ids):
@@ -158,9 +161,11 @@ class ExamAddView(APIView):
                             class_info=cls
                         )
 
+                logger.info(f"用户 {user.username} 创建试卷成功: {exam.title}")
                 return MyResponse.success(message="试卷添加成功", data={"id": exam.id})
 
         except Exception as e:
+            logger.error(f"用户 {user.username} 创建试卷失败: {str(e)}")
             return MyResponse.failed(f"添加试卷失败: {str(e)}")
 
 
@@ -299,9 +304,11 @@ class ExamModelViewSet(viewsets.ModelViewSet):
                                 class_info=cls
                             )
 
+                logger.info(f"用户 {payload.get('username')} 更新试卷成功: {exam.title}")
                 return MyResponse.success("修改成功")
 
         except Exception as e:
+            logger.error(f"用户 {payload.get('username')} 更新试卷失败: {str(e)}")
             return MyResponse.failed(f"修改试卷失败: {str(e)}")
 
 
@@ -330,9 +337,11 @@ class ExamModelViewSet(viewsets.ModelViewSet):
                 # 再删除试卷
                 exam.delete()
 
+                logger.info(f"用户 {payload.get('username')} 删除试卷成功: {exam.title}")
                 return MyResponse.success("删除成功")
 
         except Exception as e:
+            logger.error(f"用户 {payload.get('username')} 删除试卷失败: {str(e)}")
             return MyResponse.failed(f"删除试卷失败: {str(e)}")
         
         
@@ -345,6 +354,7 @@ class ExamPublishView(APIView):
         update_count = Exam.objects.filter(id=pk).update(status="published")
         if not update_count:
             return MyResponse.failed(message="修改试卷失败")
+        logger.info(f"用户 {payload.get('username')} 发布试卷成功，试卷ID: {pk}")
         return MyResponse.success(message="修改成功")
     
 
@@ -356,6 +366,7 @@ class ExamCloseView(APIView):
         update_count = Exam.objects.filter(id=pk, creator_id=payload.get("id")).update(status="closed")
         if not update_count:
             return MyResponse.failed(message="修改试卷失败")
+        logger.info(f"用户 {payload.get('username')} 关闭试卷成功，试卷ID: {pk}")
         return MyResponse.success(message="修改成功")
     
 
@@ -468,6 +479,7 @@ class ExamStartView(generics.CreateAPIView):
         try:
             if exam_record_ser.is_valid(raise_exception=True):
                 exam_record = exam_record_ser.save()
+                logger.info(f"学生 {user.username} 开始考试: {exam.title}")
                 # 使用 timezone.localtime 将 UTC 时间转换为本地时间
                 start_time_local = timezone.localtime(exam_record.start_time)
                 response_data = {
@@ -480,6 +492,7 @@ class ExamStartView(generics.CreateAPIView):
                 }
                 return MyResponse.success(data=response_data)
         except Exception as e:
+            logger.error(f"学生 {user.username} 开始考试失败: {e}")
             return MyResponse.failed(message=f"{e}")
 
         return MyResponse.failed()
@@ -695,6 +708,7 @@ class ExamSubmitView(APIView):
                 exam_record.submit_time = timezone.localtime()
                 exam_record.save()
 
+                logger.info(f"学生 {payload.get('username')} 提交试卷成功: {exam_record.exam.title}，得分: {total_score}")
                 return MyResponse.success(
                     message="试卷提交成功",
                     data={
@@ -706,6 +720,7 @@ class ExamSubmitView(APIView):
                     }
                 )
         except Exception as e:
+            logger.error(f"学生 {payload.get('username')} 提交试卷失败: {str(e)}")
             return MyResponse.failed(message=f"提交试卷失败: {str(e)}")
 
     def check_answer(self, question, user_answer):
