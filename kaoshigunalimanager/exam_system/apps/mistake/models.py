@@ -13,10 +13,10 @@ class Mistake(models.Model):
         db_table = 'mistake'
         verbose_name = '错题记录'
         verbose_name_plural = '错题记录'
-        # indexes = [
-        #     models.Index(fields=['user', 'question'], name='idx_user_question'),
-        #     models.Index(fields=['user', 'is_mastered'], name='idx_user_mastered'),
-        # ]
+        indexes = [
+            models.Index(fields=['user', 'question'], name='idx_user_question'),
+            models.Index(fields=['user', 'is_mastered'], name='idx_user_mastered'),
+        ]
         unique_together = ['user', 'question']
 
     MASTERED_CHOICES = [

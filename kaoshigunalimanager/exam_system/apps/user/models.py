@@ -29,10 +29,10 @@ class User(models.Model):
         verbose_name = '用户'
         verbose_name_plural = '用户'
         managed = False  # 关键：告诉Django不管理该表的创建/修改（不会生成迁移文件）
-        # indexes = [
-        #     models.Index(fields=['username'], name='idx_username'),
-        #     models.Index(fields=['role'], name='idx_role'),
-        # ]
+        indexes = [
+            models.Index(fields=['username'], name='idx_username'),
+            models.Index(fields=['role'], name='idx_role'),
+        ]
 
     def __str__(self):
         return self.username

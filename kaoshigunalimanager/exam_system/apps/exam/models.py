@@ -49,10 +49,10 @@ class Exam(models.Model):
         verbose_name = '试卷'
         verbose_name_plural = '试卷'
         managed = False
-        # indexes = [
-        #     models.Index(fields=['status'], name='idx_status'),
-        #     models.Index(fields=['creator'], name='idx_creator'),
-        # ]
+        indexes = [
+            models.Index(fields=['status'], name='idx_exam_status'),
+            models.Index(fields=['creator'], name='idx_exam_creator'),
+        ]
 
     def __str__(self):
         return self.title
@@ -104,10 +104,10 @@ class ExamQuestion(models.Model):
         verbose_name = '试卷题目关联'
         verbose_name_plural = '试卷题目关联'
         managed = False
-        # indexes = [
-        #     models.Index(fields=['exam'], name='idx_exam'),
-        #     models.Index(fields=['question'], name='idx_question'),
-        # ]
+        indexes = [
+            models.Index(fields=['exam'], name='idx_exam_question_exam'),
+            models.Index(fields=['question'], name='idx_exam_question_question'),
+        ]
         unique_together = [['exam', 'question']]  # 匹配数据库的联合唯一约束
 
     def __str__(self):
@@ -145,11 +145,11 @@ class ExamRecord(models.Model):
         verbose_name = '考试记录'
         verbose_name_plural = '考试记录'
         managed = False
-        # indexes = [
-        #     models.Index(fields=['exam'], name='idx_exam'),
-        #     models.Index(fields=['user'], name='idx_user'),
-        #     models.Index(fields=['status'], name='idx_status'),
-        # ]
+        indexes = [
+            models.Index(fields=['exam'], name='idx_exam_record_exam'),
+            models.Index(fields=['user'], name='idx_exam_record_user'),
+            models.Index(fields=['status'], name='idx_exam_record_status'),
+        ]
 
     def __str__(self):
         return f'{self.user.username} - {self.exam.title} - {self.get_status_display()}'
@@ -179,11 +179,11 @@ class AnswerRecord(models.Model):
         verbose_name = '答题记录'
         verbose_name_plural = '答题记录'
         managed = False
-        # indexes = [
-        #     models.Index(fields=['exam_record'], name='idx_exam_record'),
-        #     models.Index(fields=['question'], name='idx_question'),
-        # ]
-        # unique_together = [['exam_record', 'question']]
+        indexes = [
+            models.Index(fields=['exam_record'], name='idx_answer_record_exam_record'),
+            models.Index(fields=['question'], name='idx_answer_record_question'),
+        ]
+        unique_together = [['exam_record', 'question']]
 
     def __str__(self):
         return f'{self.exam_record} - {self.question.content[:20]}'

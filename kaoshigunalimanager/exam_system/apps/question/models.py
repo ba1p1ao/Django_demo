@@ -49,11 +49,11 @@ class Question(models.Model):
         verbose_name = '题目'
         verbose_name_plural = '题目'
         managed = False  # 禁用Django的表管理
-        # indexes = [
-        #     models.Index(fields=['type'], name='idx_type'),
-        #     models.Index(fields=['category'], name='idx_category'),
-        #     models.Index(fields=['creator'], name='idx_creator'),
-        # ]
+        indexes = [
+            models.Index(fields=['type'], name='idx_question_type'),
+            models.Index(fields=['category'], name='idx_question_category'),
+            models.Index(fields=['creator'], name='idx_question_creator'),
+        ]
 
     def __str__(self):
         return f'{self.get_type_display()}题：{self.content[:20]}'
