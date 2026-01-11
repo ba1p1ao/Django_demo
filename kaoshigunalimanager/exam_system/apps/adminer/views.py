@@ -1,3 +1,4 @@
+import logging
 from rest_framework.views import APIView
 from django.db.models import Count, Q
 from apps.user.models import User
@@ -5,6 +6,8 @@ from apps.exam.models import Exam, ExamRecord
 from apps.question.models import Question
 from apps.user.serializers import UserSerializers
 from utils.ResponseMessage import check_permission, check_auth, MyResponse
+
+logger = logging.getLogger('apps')
 
 
 class UserListView(APIView):
@@ -152,28 +155,30 @@ class UserInfoView(APIView):
     @check_permission
     def delete(self, request, user_id):
         payload = request.user
-        
+
         if user_id == payload.get("id"):
             return MyResponse.failed(message="不能删除自己")
 
         delete_count = User.objects.filter(id=user_id).delete()
         if not delete_count:
             return MyResponse.failed("用户删除失败")
+        logger.info(f"管理员 {payload.get('username')} 删除用户成功，用户ID: {user_id}")
         return MyResponse.success("用户删除成功")
-        
-        
+
+
 class UserUpdateStatusView(APIView):
     @check_permission
     def put(self, request, user_id):
         payload = request.user
         if user_id == payload.get("id"):
             return MyResponse.failed(message="当前状态下不能修改自己的状态")
-        
+
         status = request.data.get("status", 0)
-        
+
         update_count = User.objects.filter(id=user_id).update(status=status)
         if not update_count:
             return MyResponse.failed(message="修改用户状态失败")
+        logger.info(f"管理员 {payload.get('username')} 修改用户状态成功，用户ID: {user_id}，状态: {status}")
         return MyResponse.success("修改用户状态成功")
 
 
@@ -183,12 +188,13 @@ class UserUpdateRoleView(APIView):
         payload = request.user
         if user_id == payload.get("id"):
             return MyResponse.failed(message="当前状态下不能修改自己的角色")
-    
+
         role = request.data.get("role", 0)
-        
+
         update_count = User.objects.filter(id=user_id).update(role=role)
         if not update_count:
             return MyResponse.failed(message="修改用户角色失败")
+        logger.info(f"管理员 {payload.get('username')} 修改用户角色成功，用户ID: {user_id}，角色: {role}")
         return MyResponse.success("修改用户角色成功")
     
     
