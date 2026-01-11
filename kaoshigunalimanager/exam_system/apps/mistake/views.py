@@ -1,3 +1,4 @@
+import logging
 from rest_framework.views import APIView
 from django.db.models import Count, Max, Min
 from apps.question.models import Question
@@ -5,6 +6,8 @@ from apps.user.models import User
 from apps.exam.models import AnswerRecord, ExamRecord
 from apps.mistake.models import Mistake
 from utils.ResponseMessage import check_auth, MyResponse
+
+logger = logging.getLogger('apps')
 
 
 # # 没有使用错题本表实现，学生的错题统计
@@ -308,6 +311,7 @@ class MistakeMasteredView(APIView):
         mistake.is_mastered = 1
         mistake.save()
 
+        logger.info(f"学生 {payload.get('username')} 标记错题为已掌握，错题ID: {mistake_id}")
         return MyResponse.success(message="标记成功")
 
 
@@ -415,6 +419,8 @@ class MistakeExportView(APIView):
             # 使用内存流生成文件
             excel_buffer = self.export_to_excel(question_list)
 
+            logger.info(f"学生 {user.username} 导出错题本成功，数量: {len(question_list)}")
+
             # 返回文件供前端下载
             filename = f"错题本导出_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
             encoded_filename = quote(filename)
@@ -426,6 +432,7 @@ class MistakeExportView(APIView):
             response['Content-Disposition'] = f'attachment; filename*=UTF-8\'\'{encoded_filename}'
             return response
         except Exception as e:
+            logger.error(f"学生 {user.username} 导出错题本失败: {e}")
             return MyResponse.filed(f"导出文件是发生错误，{e}")
 
 
