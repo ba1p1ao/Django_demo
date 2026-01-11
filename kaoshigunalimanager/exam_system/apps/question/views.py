@@ -1,3 +1,4 @@
+import logging
 import pandas as pd
 import io
 from rest_framework.views import APIView
@@ -13,6 +14,8 @@ from apps.question.models import Question
 from apps.user.models import User
 from utils.ResponseMessage import MyResponse, check_permission, check_auth
 from django.db import transaction
+
+logger = logging.getLogger('apps')
 
 # 题目类型映射常量
 QUESTION_TYPE_MAP = {
@@ -118,8 +121,10 @@ class QuestionInfoView(RetrieveAPIView, UpdateAPIView, DestroyAPIView):
         try:
             if question_ser.is_valid(raise_exception=True):
                 question_ser.save()
+                logger.info(f"题目 ID {question.id} 更新成功")
                 return MyResponse.success("更新成功")
         except Exception as e:
+            logger.error(f"题目 ID {question.id} 更新失败: {e}")
             return MyResponse.failed(message=e)
 
     def destroy(self, request, *args, **kwargs):
@@ -127,7 +132,9 @@ class QuestionInfoView(RetrieveAPIView, UpdateAPIView, DestroyAPIView):
         if isinstance(payload, MyResponse):
             return payload
         question = self.get_object()
+        question_id = question.id
         self.perform_destroy(question)
+        logger.info(f"题目 ID {question_id} 删除成功")
         return MyResponse.success("删除成功")
 
 
@@ -148,8 +155,10 @@ class QuestionAddView(CreateAPIView):
         try:
             if question_ser.is_valid(raise_exception=True):
                 question_ser.save()
+                logger.info(f"用户 {payload.get('username')} 添加题目成功")
                 return MyResponse.success(message='添加成功', data={"id": payload.get("id")})
         except Exception as e:
+            logger.error(f"用户 {payload.get('username')} 添加题目失败: {e}")
             print(e)
             return MyResponse.failed(message=e)
 
@@ -171,6 +180,7 @@ class QuestionDeleteListView(APIView):
         delete_count = Question.objects.filter(id__in=ids).delete()
         # print(delete_count)
         if delete_count:
+            logger.info(f"用户 {payload.get('username')} 批量删除题目成功，数量: {len(ids)}")
             return MyResponse.success(message="批量删除成功")
 
         return MyResponse.other(code=404, message="请选择要删除的题目")
@@ -233,8 +243,10 @@ class QuestionImportView(APIView):
                 response_data["success"] = success_count
                 response_data["failed"] = failed_count
                 response_data["failed_list"] = failed_list
+                logger.info(f"用户 {current_user.username} 导入题目成功，成功: {success_count}，失败: {failed_count}")
                 return MyResponse.success(message="题目导入成功", data=response_data)
         except Exception as e:
+            logger.error(f"用户 {payload.get('username')} 导入题目失败: {e}")
             return MyResponse.failed(f"题目导入失败，{e}")
         
     
@@ -278,7 +290,9 @@ class QuestionExportView(APIView):
         try:
             # 使用内存流生成文件
             excel_buffer = self.export_to_excel(ser_question_data)
-            
+
+            logger.info(f"用户 {request.user.get('username')} 导出题目成功，数量: {len(ids)}")
+
             # 返回文件供前端下载
             filename = f"题目导出_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
             encoded_filename = quote(filename)
@@ -290,6 +304,7 @@ class QuestionExportView(APIView):
             response['Content-Disposition'] = f'attachment; filename*=UTF-8\'\'{encoded_filename}'
             return response
         except Exception as e:
+            logger.error(f"用户 {request.user.get('username')} 导出题目失败: {e}")
             return MyResponse.filed(f"到处文件是发生错误，{e}")
     
     
