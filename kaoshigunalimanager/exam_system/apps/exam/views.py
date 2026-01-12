@@ -19,6 +19,20 @@ from utils.ResponseMessage import MyResponse, check_permission, check_auth # 添
 from utils.ReportPDF import ReportPDFGenerator
 from datetime import datetime
 from django.utils import timezone
+from utils.CacheTools import cache_delete_pattern
+from utils.CacheConfig import (
+    CACHE_KEY_EXAM_LIST,
+    CACHE_TIMEOUT_EXAM_LIST,
+    CACHE_KEY_EXAM_DETAIL,
+    CACHE_TIMEOUT_EXAM_DETAIL,
+    CACHE_KEY_EXAM_AVAILABLE,
+    CACHE_TIMEOUT_EXAM_AVAILABLE,
+    generate_cache_key,
+    generate_filter_key, CACHE_KEY_EXAM_QUESTIONS, CACHE_TIMEOUT_EXAM_QUESTIONS
+)
+from django.core.cache import cache
+
+
 
 logger = logging.getLogger('apps')
 
@@ -57,6 +71,16 @@ class ExamListView(APIView):
 
         offset = (page - 1) * page_size
 
+        # 构建cache key
+        cache_filters = generate_filter_key(filter_body)
+        cache_key = generate_cache_key(
+            CACHE_KEY_EXAM_LIST, role=payload.get("role"), filter=cache_filters, page=page, size=page_size
+        )
+        # 获取缓存数据
+        cache_data = cache.get(cache_key)
+        if cache_data:
+            return MyResponse.success(data=cache_data)
+
         try:
             exam_queryset = Exam.objects.filter(**filter_body).order_by("-update_time")
             total = exam_queryset.count()
@@ -70,6 +94,9 @@ class ExamListView(APIView):
                 "page": page,
                 "size": page_size,
             }
+
+            # 添加缓存
+            cache.set(cache_key, response_data, CACHE_TIMEOUT_EXAM_LIST)
             return MyResponse.success(data=response_data)
 
         except Exception as e:
@@ -162,6 +189,7 @@ class ExamAddView(APIView):
                         )
 
                 logger.info(f"用户 {user.username} 创建试卷成功: {exam.title}")
+                cache_delete_pattern(":1:exam:list:*")
                 return MyResponse.success(message="试卷添加成功", data={"id": exam.id})
 
         except Exception as e:
@@ -182,11 +210,22 @@ class ExamModelViewSet(viewsets.ModelViewSet):
         except Exam.DoesNotExist:
             return MyResponse.failed(message="试卷不存在")
 
+
+        # 构建 cache key
+        cache_key = generate_cache_key(
+            CACHE_KEY_EXAM_DETAIL, id=pk,
+        )
+        cache_data = cache.get(cache_key)
+        if cache_data:
+            return MyResponse.success(data=cache_data)
+
         try:
             exam_info = ExamInfoSerializer(instance=exam).data
         except Exception as e:
             return MyResponse.failed(message=f"试卷获取失败: {str(e)}")
 
+        # 设置缓存
+        cache.set(cache_key, exam_info, CACHE_TIMEOUT_EXAM_DETAIL)
         return MyResponse.success(data=exam_info)
     
     
@@ -303,6 +342,17 @@ class ExamModelViewSet(viewsets.ModelViewSet):
                             )
 
                 logger.info(f"用户 {payload.get('username')} 更新试卷成功: {exam.title}")
+
+                # 修改成功，就删除缓存信息
+                cache_key = generate_cache_key(CACHE_KEY_EXAM_DETAIL, id=pk)
+                cache.delete(cache_key)
+                cache_delete_pattern(":1:exam:list:*")
+                cache_delete_pattern(":1:exam:available:*")
+
+                # 如果题目列表发生变化，删除考试题目缓存
+                if add_qids or del_qids:
+                    cache_delete_pattern(":1:exam:questions:*")
+
                 return MyResponse.success("修改成功")
 
         except Exception as e:
@@ -336,6 +386,12 @@ class ExamModelViewSet(viewsets.ModelViewSet):
                 exam.delete()
 
                 logger.info(f"用户 {payload.get('username')} 删除试卷成功: {exam.title}")
+                # 删除缓存
+                cache_key = generate_cache_key(CACHE_KEY_EXAM_DETAIL, id=pk)
+                cache.delete(cache_key)
+                cache_delete_pattern(":1:exam:list:*")
+                cache_delete_pattern(":1:exam:available:*")
+
                 return MyResponse.success("删除成功")
 
         except Exception as e:
@@ -353,6 +409,13 @@ class ExamPublishView(APIView):
         if not update_count:
             return MyResponse.failed(message="修改试卷失败")
         logger.info(f"用户 {payload.get('username')} 发布试卷成功，试卷ID: {pk}")
+
+        # 删除缓存
+        cache_key = generate_cache_key(CACHE_KEY_EXAM_DETAIL, id=pk)
+        cache.delete(cache_key)
+        cache_delete_pattern(":1:exam:list:*")
+        cache_delete_pattern(":1:exam:available:*")
+
         return MyResponse.success(message="修改成功")
     
 
@@ -365,6 +428,13 @@ class ExamCloseView(APIView):
         if not update_count:
             return MyResponse.failed(message="修改试卷失败")
         logger.info(f"用户 {payload.get('username')} 关闭试卷成功，试卷ID: {pk}")
+
+        # 删除缓存
+        cache_key = generate_cache_key(CACHE_KEY_EXAM_DETAIL, id=pk)
+        cache.delete(cache_key)
+        cache_delete_pattern(":1:exam:list:*")
+        cache_delete_pattern(":1:exam:available:*")
+
         return MyResponse.success(message="修改成功")
     
 
@@ -374,6 +444,13 @@ class ExamAvailableView(generics.ListAPIView):
     @check_auth
     def list(self, request, *args, **kwargs):
         payload = request.user
+        user_id = payload.get("id")
+
+        # 构建 cache key
+        cache_key = generate_cache_key(CACHE_KEY_EXAM_AVAILABLE, user_id=user_id)
+        cache_data = cache.get(cache_key)
+        if cache_data:
+            return MyResponse.success(data=cache_data)
 
         # 不管学生的班级信息，先获取所有的考试信息
         exam_list = self.get_queryset().filter(status="published")
@@ -417,6 +494,9 @@ class ExamAvailableView(generics.ListAPIView):
             return MyResponse.success("没有考试内容")
         
         exam_ser_data = self.get_serializer(instance=valid_exam_list, many=True).data
+
+        # 设置缓存
+        cache.set(cache_key, exam_ser_data, CACHE_TIMEOUT_EXAM_AVAILABLE)
         return MyResponse.success(data=exam_ser_data)
               
 
@@ -478,6 +558,10 @@ class ExamStartView(generics.CreateAPIView):
             if exam_record_ser.is_valid(raise_exception=True):
                 exam_record = exam_record_ser.save()
                 logger.info(f"学生 {user.username} 开始考试: {exam.title}")
+
+                # 清除可参加考试列表缓存
+                cache_delete_pattern(":1:exam:available:*")
+
                 # 使用 timezone.localtime 将 UTC 时间转换为本地时间
                 start_time_local = timezone.localtime(exam_record.start_time)
                 response_data = {
@@ -501,6 +585,14 @@ class ExamQuestionsView(APIView):
     @check_auth
     def get(self, request, exam_id):
         payload = request.user
+
+        # 构建 cache key
+        cache_key = generate_cache_key(
+            CACHE_KEY_EXAM_QUESTIONS, exam_id=exam_id, user_id=payload.get("id")
+        )
+        cache_data = cache.get(cache_key)
+        if cache_data:
+            return MyResponse.success(data=cache_data)
 
         exam = Exam.objects.filter(id=exam_id, status="published").first()
         if not exam:
@@ -534,7 +626,8 @@ class ExamQuestionsView(APIView):
                 "exam_record_id": exam_record.id if exam_record else None,
                 "saved_answers": saved_answers
             }
-
+            # 设置缓存
+            cache.set(cache_key, response_data, CACHE_TIMEOUT_EXAM_QUESTIONS)
             return MyResponse.success(data=response_data)
         except Exception as e:
             return MyResponse.failed(message="该试卷发生错误，请联系老师或管理员")
