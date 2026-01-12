@@ -214,3 +214,5 @@ uploads/
 static/
 muxishopweb*/
 node_modules/
+logs/
+*.log
