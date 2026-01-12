@@ -117,12 +117,26 @@ DATABASES = {
 
 # redis 配置信息
 
+# CACHES = {
+#     "default": {
+#         "BACKEND": "django.core.cache.backends.redis.RedisCache",
+#         "LOCATION": "redis://127.0.0.1:6379/2",  # select 2 选择 2 redis 库
+#         "TIMEOUT": 60,  # 设置超时时间，默认5分钟
+#         # 'KEY_PREFIX': 'muxishop_captcha',  # 缓存key前缀
+#     }
+# }
+
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "BACKEND": "django_redis.cache.RedisCache",
         "LOCATION": "redis://127.0.0.1:6379/2",  # select 2 选择 2 redis 库
         "TIMEOUT": 60,  # 设置超时时间，默认5分钟
         # 'KEY_PREFIX': 'muxishop_captcha',  # 缓存key前缀
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            # 可设置连接池大小，优化性能
+            "CONNECTION_POOL_KWARGS": {"max_connections": 100},
+        }
     }
 }
 
