@@ -4,16 +4,38 @@ import io
 from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.generics import RetrieveAPIView, CreateAPIView, UpdateAPIView, DestroyAPIView
-from rest_framework.pagination import PageNumberPagination
-from rest_framework.decorators import authentication_classes, permission_classes
-from rest_framework.exceptions import PermissionDenied
 from django.http import FileResponse
 from urllib.parse import quote
 from apps.question.serializers import QuestionListSerializers, QuestionSerializers, QuestionAddSerializers
 from apps.question.models import Question
 from apps.user.models import User
-from utils.ResponseMessage import MyResponse, check_permission, check_auth
+from utils.ResponseMessage import MyResponse, check_permission
 from django.db import transaction
+from utils.CacheConfig import (
+    CACHE_KEY_QUESTION_LIST,
+    CACHE_TIMEOUT_QUESTION_LIST,
+    CACHE_KEY_QUESTION_DETAIL,
+    CACHE_TIMEOUT_QUESTION_DETAIL,
+    generate_cache_key,
+    generate_filter_key
+)
+from django.core.cache import cache
+from django_redis import get_redis_connection
+
+
+def cache_delete_pattern(pattern):
+    """安全删除匹配模式的所有键"""
+    conn = get_redis_connection("default")  # "default" 对应 CACHES 中的配置
+
+    # 使用 scan_iter 替代 KEYS，避免阻塞
+    deleted_count = 0
+    for key in conn.scan_iter(match=pattern, count=100):  # count 每次迭代数量
+        conn.delete(key)
+        deleted_count += 1
+
+    return deleted_count
+
+
 
 logger = logging.getLogger('apps')
 
@@ -38,11 +60,8 @@ QUESTION_TYPE_MAP = {
 # 难度映射常量
 DIFFICULTY_MAP = {
     # 导入用
-    "easy": "easy",
     "简单": "easy",
-    "medium": "medium",
     "中等": "medium",
-    "hard": "hard",
     "困难": "hard",
     # 导出用
     "easy": "简单",
@@ -74,6 +93,16 @@ class QuestionListView(APIView):
         page_size = int(request_data.get("size", 10))
         offset = (page - 1) * page_size
 
+        # 生成缓存键
+        filters = generate_filter_key(request_data)
+        cache_key = generate_cache_key(
+            CACHE_KEY_QUESTION_LIST, filter=filters, page=page, size=page_size
+        )
+        # 尝试从缓存获取
+        cache_data = cache.get(cache_key)
+        if cache_data:
+           return MyResponse.success(data=cache_data)
+
         question_list = Question.objects.filter(**filter_body).all().order_by("-update_time")
         page_list = question_list[offset:offset + page_size]
         ser_data = QuestionSerializers(instance=page_list, many=True).data
@@ -83,6 +112,8 @@ class QuestionListView(APIView):
             "page": page,
             "size": page_size,
         }
+        # 这是缓存
+        cache.set(cache_key, response_data, CACHE_TIMEOUT_QUESTION_LIST)
         return MyResponse.success(data=response_data)
 
 
@@ -105,7 +136,16 @@ class QuestionInfoView(RetrieveAPIView, UpdateAPIView, DestroyAPIView):
         if isinstance(payload, MyResponse):
             return payload
         question = self.get_object()
+
+        # 设置 cache key
+        cache_key = generate_cache_key(CACHE_KEY_QUESTION_DETAIL, id=question.id)
+        # 获取 缓存数据
+        cache_data = cache.get(cache_key)
+        if cache_data:
+            return MyResponse.success(data=cache_data)
+
         ser_data = self.get_serializer(instance=question).data
+        cache.set(cache_key, ser_data, CACHE_TIMEOUT_QUESTION_DETAIL)
         return MyResponse.success(data=ser_data)
 
     def update(self, request, *args, **kwargs):
@@ -121,6 +161,8 @@ class QuestionInfoView(RetrieveAPIView, UpdateAPIView, DestroyAPIView):
             if question_ser.is_valid(raise_exception=True):
                 question_ser.save()
                 logger.info(f"题目 ID {question.id} 更新成功")
+                cache.delete(f"question:detail:{question.id}")
+                cache_delete_pattern(":1:question:list:*")
                 return MyResponse.success("更新成功")
         except Exception as e:
             logger.error(f"题目 ID {question.id} 更新失败: {e}")
@@ -134,13 +176,15 @@ class QuestionInfoView(RetrieveAPIView, UpdateAPIView, DestroyAPIView):
         question_id = question.id
         self.perform_destroy(question)
         logger.info(f"题目 ID {question_id} 删除成功")
+        cache.delete(f"question:detail:{question.id}")
+        cache_delete_pattern(":1:question:list:*")
         return MyResponse.success("删除成功")
 
 
 class QuestionAddView(CreateAPIView):
     queryset = Question.objects
     serializer_class = QuestionAddSerializers
-    
+
     def create(self, request, *args, **kwargs):
         payload = request.user
         if not payload:
@@ -155,6 +199,7 @@ class QuestionAddView(CreateAPIView):
             if question_ser.is_valid(raise_exception=True):
                 question_ser.save()
                 logger.info(f"用户 {payload.get('username')} 添加题目成功")
+                cache_delete_pattern(":1:question:list:*")
                 return MyResponse.success(message='添加成功', data={"id": payload.get("id")})
         except Exception as e:
             logger.error(f"用户 {payload.get('username')} 添加题目失败: {e}")
@@ -178,6 +223,8 @@ class QuestionDeleteListView(APIView):
         delete_count = Question.objects.filter(id__in=ids).delete()
         if delete_count:
             logger.info(f"用户 {payload.get('username')} 批量删除题目成功，数量: {len(ids)}")
+            cache.delete_many([f"question:detail:{id}" for id in ids])
+            cache_delete_pattern(":1:question:list:*")
             return MyResponse.success(message="批量删除成功")
 
         return MyResponse.other(code=404, message="请选择要删除的题目")
@@ -187,7 +234,7 @@ class QuestionDeleteListView(APIView):
 class QuestionImportView(APIView):
     # 添加文件解析器
     parser_classes = [MultiPartParser, FormParser]
-    
+
     @check_permission
     def post(self, request):
         payload = request.user
@@ -245,8 +292,8 @@ class QuestionImportView(APIView):
         except Exception as e:
             logger.error(f"用户 {payload.get('username')} 导入题目失败: {e}")
             return MyResponse.failed(f"题目导入失败，{e}")
-        
-    
+
+
     def process_import_data(self, df):
         questions = []
         try:
@@ -303,8 +350,8 @@ class QuestionExportView(APIView):
         except Exception as e:
             logger.error(f"用户 {request.user.get('username')} 导出题目失败: {e}")
             return MyResponse.failed(f"到处文件是发生错误，{e}")
-    
-    
+
+
     def export_to_excel(self, questions):
         frame = {
             "题目类型": [],
@@ -335,7 +382,7 @@ class QuestionExportView(APIView):
                 frame['选项B'].append(None)
                 frame['选项C'].append(None)
                 frame['选项D'].append(None)
-                
+
             frame['正确答案'].append(question["answer"])
             frame['题目解析'].append(question["analysis"])
             frame['难度'].append(DIFFICULTY_MAP.get(question["difficulty"]))
