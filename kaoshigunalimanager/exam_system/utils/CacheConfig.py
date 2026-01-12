@@ -10,7 +10,6 @@
 # 实时性要求高的缓存（考试相关）
 CACHE_TIMEOUT_EXAM_AVAILABLE = 60          # 可参加考试列表：1分钟
 CACHE_TIMEOUT_EXAM_QUESTIONS = 120         # 考试题目：2分钟
-CACHE_TIMEOUT_EXAM_ANSWERS = 60            # 考试答案：1分钟
 
 # 频繁查询但变更较少的缓存
 CACHE_TIMEOUT_QUESTION_LIST = 600          # 题库列表：10分钟
@@ -52,7 +51,6 @@ CACHE_KEY_EXAM_LIST = f"{CACHE_PREFIX_EXAM}:list:{{role}}:{{filter}}:{{page}}:{{
 CACHE_KEY_EXAM_DETAIL = f"{CACHE_PREFIX_EXAM}:detail:{{id}}"
 CACHE_KEY_EXAM_AVAILABLE = f"{CACHE_PREFIX_EXAM}:available:{{user_id}}"
 CACHE_KEY_EXAM_QUESTIONS = f"{CACHE_PREFIX_EXAM}:questions:{{exam_id}}:{{user_id}}"
-CACHE_KEY_EXAM_ANSWERS = f"{CACHE_PREFIX_EXAM}:answers:{{exam_record_id}}:{{question_id}}"
 
 # 用户相关
 CACHE_KEY_USER_INFO = f"{CACHE_PREFIX_USER}:info:{{user_id}}"
@@ -119,7 +117,7 @@ def generate_filter_key(filter_dict: dict) -> str:
 
 # 当需要清除某类缓存时，增加版本号即可
 CACHE_VERSION = {
-    "question": 2,
+    "question": 1,
     "exam": 1,
     "user": 1,
     "class": 1,
