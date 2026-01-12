@@ -16,7 +16,7 @@ from utils.CacheConfig import (
     CACHE_KEY_SYSTEM_STATISTICS,
     generate_cache_key,
     generate_filter_key,
-    get_cache_timeout,
+    get_cache_timeout, CACHE_KEY_STUDENT_CLASS,
 )
 from utils.CacheTools import cache_delete_pattern
 from django.core.cache import cache
@@ -281,6 +281,7 @@ class UserUpdateStatusView(APIView):
         cache.delete(generate_cache_key(CACHE_KEY_USER_INFO, user_id=user_id))
         # 删除用户统计缓存
         cache.delete(generate_cache_key(CACHE_KEY_USER_STATISTICS))
+        cache_delete_pattern("class:members:*")
 
         return MyResponse.success("修改用户状态成功")
 
@@ -315,6 +316,10 @@ class UserUpdateRoleView(APIView):
         cache.delete(generate_cache_key(CACHE_KEY_USER_INFO, user_id=user_id))
         # 删除用户统计缓存
         cache.delete(generate_cache_key(CACHE_KEY_USER_STATISTICS))
+        # 清除班级成员缓存
+        cache_delete_pattern("class:members:*")
+        # 清除学生班级信息缓存
+        cache.delete(generate_cache_key(CACHE_KEY_STUDENT_CLASS, user_id=user_id))
 
         return MyResponse.success("修改用户角色成功")
     

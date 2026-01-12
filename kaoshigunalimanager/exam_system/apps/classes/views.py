@@ -178,6 +178,8 @@ class ClassView(APIView):
             # 清除班级统计缓存
             cache_delete_pattern("class:statistics:*")
             cache_delete_pattern("class:members:*")
+            cache_delete_pattern("class:ranking:*")
+            cache_delete_pattern("class:trend:*")
 
             return MyResponse.success(message="删除成功")
         except Class.DoesNotExist:
