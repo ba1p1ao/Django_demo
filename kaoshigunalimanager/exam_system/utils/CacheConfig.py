@@ -13,9 +13,9 @@ CACHE_TIMEOUT_EXAM_QUESTIONS = 120         # 考试题目：2分钟
 
 # 频繁查询但变更较少的缓存
 CACHE_TIMEOUT_QUESTION_LIST = 600          # 题库列表：10分钟
-CACHE_TIMEOUT_QUESTION_DETAIL = 1800       # 题目详情：30分钟
+CACHE_TIMEOUT_QUESTION_DETAIL = 300       # 题目详情：5分钟
 CACHE_TIMEOUT_EXAM_LIST = 300              # 试卷列表：5分钟
-CACHE_TIMEOUT_EXAM_DETAIL = 600            # 试卷详情：10分钟
+CACHE_TIMEOUT_EXAM_DETAIL = 180            # 试卷详情：3分钟
 CACHE_TIMEOUT_USER_INFO = 300              # 用户信息：5分钟
 CACHE_TIMEOUT_USER_LIST = 300              # 用户列表：5分钟
 CACHE_TIMEOUT_CLASS_LIST = 600             # 班级列表：10分钟
@@ -23,9 +23,21 @@ CACHE_TIMEOUT_MISTAKE_LIST = 300           # 错题列表：5分钟
 
 # 统计类数据缓存（计算成本高）
 CACHE_TIMEOUT_CLASS_STATISTICS = 900       # 班级统计：15分钟
+CACHE_TIMEOUT_CLASS_MEMBERS = 300          # 班级成员：5分钟
 CACHE_TIMEOUT_CLASS_TREND = 600            # 班级成绩趋势：10分钟
 CACHE_TIMEOUT_CLASS_RANKING = 300          # 班级考试排名：5分钟
 CACHE_TIMEOUT_USER_STATISTICS = 600        # 用户统计：10分钟
+
+# 考试记录相关
+CACHE_TIMEOUT_EXAM_RECORD_DETAIL = 120     # 考试记录详情：2分钟
+CACHE_TIMEOUT_EXAM_RECORD_STATISTICS = 600 # 考试统计：10分钟
+CACHE_TIMEOUT_EXAM_RANKING = 300           # 考试排名：5分钟
+
+# 系统统计相关
+CACHE_TIMEOUT_SYSTEM_STATISTICS = 300      # 系统统计：5分钟
+
+# 学生相关
+CACHE_TIMEOUT_STUDENT_CLASS = 600          # 学生班级信息：10分钟
 
 # ============================================
 # 缓存 Key 前缀配置
@@ -51,6 +63,17 @@ CACHE_KEY_EXAM_LIST = f"{CACHE_PREFIX_EXAM}:list:{{role}}:{{filter}}:{{page}}:{{
 CACHE_KEY_EXAM_DETAIL = f"{CACHE_PREFIX_EXAM}:detail:{{id}}"
 CACHE_KEY_EXAM_AVAILABLE = f"{CACHE_PREFIX_EXAM}:available:{{user_id}}"
 CACHE_KEY_EXAM_QUESTIONS = f"{CACHE_PREFIX_EXAM}:questions:{{exam_id}}:{{user_id}}"
+
+# 考试记录相关
+CACHE_KEY_EXAM_RECORD_DETAIL = f"{CACHE_PREFIX_EXAM}_record:detail:{{id}}"
+CACHE_KEY_EXAM_RECORD_STATISTICS = f"{CACHE_PREFIX_EXAM}:statistics:{{exam_id}}"
+CACHE_KEY_EXAM_RANKING = f"{CACHE_PREFIX_EXAM}:ranking:{{exam_id}}:{{class_id}}:{{page}}:{{size}}"
+
+# 系统统计相关
+CACHE_KEY_SYSTEM_STATISTICS = f"{CACHE_PREFIX_STATISTICS}:system"
+
+# 学生相关
+CACHE_KEY_STUDENT_CLASS = f"{CACHE_PREFIX_USER}:class:{{user_id}}"
 
 # 用户相关
 CACHE_KEY_USER_INFO = f"{CACHE_PREFIX_USER}:info:{{user_id}}"
@@ -123,3 +146,11 @@ CACHE_VERSION = {
     "class": 1,
     "mistake": 1,
 }
+
+def custom_cache_key(key, key_prefix, version):
+    """
+    自定义缓存键生成函数
+    """
+    key_prefix = key.split(":")[0]
+    version = CACHE_VERSION.get(key_prefix, "1")
+    return f":{version}:{key}"
