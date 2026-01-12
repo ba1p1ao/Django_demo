@@ -179,11 +179,20 @@ const handleSubmit = async () => {
   // 处理多选题答案
   if (form.type === 'multiple') {
     form.answer = multipleAnswers.value.sort().join(',')
+  } else if (form.type === 'judge') {
+    // 将判断题的答案从 true/false 转换为 A/B
+    if (form.answer === 'true') {
+      form.answer = 'A'
+    } else if (form.answer === 'false') {
+      form.answer = 'B'
+    }
   }
 
   loading.value = true
   try {
     if (isEdit.value) {
+      // 打印发送的数据
+      console.log('发送更新请求的数据:', JSON.stringify(form, null, 2))
       await updateQuestion(route.params.id, form)
       ElMessage.success('更新成功')
     } else {
@@ -193,6 +202,14 @@ const handleSubmit = async () => {
     router.push('/questions')
   } catch (error) {
     console.error(error)
+    // 显示错误消息给用户
+    if (error.response) {
+      ElMessage.error(error.response.data?.message || error.message || '请求失败')
+    } else if (error.message) {
+      ElMessage.error(error.message)
+    } else {
+      ElMessage.error('操作失败，请重试')
+    }
   } finally {
     loading.value = false
   }
@@ -212,6 +229,15 @@ const loadDetail = async () => {
     }
     if (data.type === 'multiple') {
       multipleAnswers.value = data.answer.split(',')
+    } else if (data.type === 'judge') {
+      // 判断题的答案可能是 A（正确）或 B（错误），需要转换为 true/false
+      if (data.answer === 'A' || data.answer === '正确') {
+        form.answer = 'true'
+      } else if (data.answer === 'B' || data.answer === '错误') {
+        form.answer = 'false'
+      } else {
+        form.answer = data.answer
+      }
     }
   } catch (error) {
     console.error(error)

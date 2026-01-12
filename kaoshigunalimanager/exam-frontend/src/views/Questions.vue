@@ -132,6 +132,7 @@ import { exportQuestions } from '@/api/import-export'
 import QuestionImportDialog from '@/components/QuestionImportDialog.vue'
 import { useUserStore } from '@/stores/user'
 
+const router = useRouter()
 const userStore = useUserStore()
 const userInfo = computed(() => userStore.userInfo || {})
 
