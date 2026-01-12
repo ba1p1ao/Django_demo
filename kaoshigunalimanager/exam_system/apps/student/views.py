@@ -5,6 +5,15 @@ from apps.user.models import User
 from apps.exam.models import ExamRecord, Exam
 from apps.classes.models import Class, UserClass
 from utils.ResponseMessage import check_auth, check_permission, MyResponse
+from utils.CacheConfig import (
+    CACHE_KEY_CLASS_TREND,
+    CACHE_TIMEOUT_CLASS_TREND,
+    CACHE_TIMEOUT_STUDENT_CLASS,
+    CACHE_KEY_STUDENT_CLASS,
+    generate_cache_key
+)
+from utils.CacheTools import cache_delete_pattern
+from django.core.cache import cache
 from datetime import timedelta
 
 
@@ -17,6 +26,13 @@ class ScoreTrendView(APIView):
         user_id = payload.get("id")
 
         days = int(request.GET.get("days"))
+
+        # 构建缓存键
+        cache_key = generate_cache_key(CACHE_KEY_CLASS_TREND, user_id=user_id, days=days)
+        cache_data = cache.get(cache_key)
+        if cache_data:
+            return MyResponse.success(data=cache_data)
+
         timeago = timezone.now() - timedelta(days=days)
         exam_records = ExamRecord.objects.filter(user_id=user_id, status="graded",
                                                  exam__end_time__gte=timeago).select_related('exam')
@@ -57,6 +73,8 @@ class ScoreTrendView(APIView):
             "trend": trend_list
         }
 
+        # 设置缓存
+        cache.set(cache_key, response_data, CACHE_TIMEOUT_CLASS_TREND)
         return MyResponse.success(data=response_data)
 
 
@@ -65,6 +83,12 @@ class StudentClassView(APIView):
     def get(self, request):
         payload = request.user
         user_id = payload.get("id")
+
+        # 构建缓存键
+        cache_key = generate_cache_key(CACHE_KEY_STUDENT_CLASS, user_id=user_id)
+        cache_data = cache.get(cache_key)
+        if cache_data:
+            return MyResponse.success(data=cache_data)
 
         # 获取学生所在的班级
         class_info = Class.objects.filter(userclass__user_id=user_id).first()
@@ -113,6 +137,8 @@ class StudentClassView(APIView):
             "my_rank": my_rank,
         }
 
+        # 设置缓存
+        cache.set(cache_key, response_data, CACHE_TIMEOUT_STUDENT_CLASS)
         return MyResponse.success(data=response_data)
 
 
