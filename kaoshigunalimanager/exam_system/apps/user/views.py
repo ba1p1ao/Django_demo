@@ -5,6 +5,8 @@ from rest_framework.decorators import authentication_classes, permission_classes
 from exam_system.settings import JWT_EXPIRE_TIME
 from apps.user.models import User
 from apps.user.serializers import UserSerializers, UserUpdateSerializer
+from django.core.cache import cache
+from utils.CacheConfig import generate_cache_key, CACHE_KEY_USER_INFO
 from utils.ResponseMessage import MyResponse
 from utils.PasswordEncode import verify_password, hash_password
 from utils.JWTAuth import create_token
@@ -116,6 +118,7 @@ class UserUpdateView(APIView):
         if user_ser.is_valid():
             user_ser.save()
             logger.info(f"用户 {user.username} 信息更新成功")
+            cache.delete(generate_cache_key(CACHE_KEY_USER_INFO, user_id=user_id))
             return MyResponse.success(message="更新成功")
 
         logger.error(f"用户 {user.username} 信息更新失败: {user_ser.errors}")
