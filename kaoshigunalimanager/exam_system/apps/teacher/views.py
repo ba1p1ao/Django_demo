@@ -3,7 +3,13 @@ from django.db.models import Count, Q
 from apps.classes.models import Class, UserClass
 from apps.user.models import User
 from utils.ResponseMessage import check_permission, check_auth, MyResponse
-
+from django.core.cache import cache
+from utils.CacheConfig import (
+    CACHE_KEY_CLASS_LIST,
+    CACHE_TIMEOUT_CLASS_LIST,
+    CAHCE_KEY_TEACHER_CLASS,
+    get_cache_timeout,  generate_cache_key, generate_filter_key
+)
 
 class TeacherClassesView(APIView):
     @check_permission
@@ -32,6 +38,13 @@ class TeacherClassesView(APIView):
                 filter_body["name__icontains"] = v
             elif k in ["grade", "status"] and v:
                 filter_body[k] = v
+
+        # 生成缓存键
+        cache_filters = generate_filter_key(filter_body)
+        cache_key = generate_cache_key(CAHCE_KEY_TEACHER_CLASS, filter=cache_filters, user_id=user_id, page=page, size=page_size)
+        cache_data = cache.get(cache_key)
+        if cache_data:
+            return MyResponse.success(data=cache_data)
 
         # 获取教师管理的班级（作为班主任）
         cur_teacher_classes = Class.objects.filter(head_teacher=teacher, **filter_body)
@@ -67,5 +80,5 @@ class TeacherClassesView(APIView):
             "page": page,
             "size": page_size
         }
-
+        cache.set(cache_key, response_data, get_cache_timeout(CACHE_TIMEOUT_CLASS_LIST))
         return MyResponse.success(data=response_data)

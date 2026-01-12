@@ -82,6 +82,9 @@ CACHE_KEY_EXAM_RANKING = f"{CACHE_PREFIX_EXAM}:ranking:{{exam_id}}:{{class_id}}:
 # 系统统计相关
 CACHE_KEY_SYSTEM_STATISTICS = f"{CACHE_PREFIX_STATISTICS}:system"
 
+# 教师相关
+CAHCE_KEY_TEACHER_CLASS = f"teacher:class:{{filter}}:{{user_id}}:{{page}}:{{size}}"
+
 # 学生相关
 CACHE_KEY_STUDENT_CLASS = f"{CACHE_PREFIX_USER}:class:{{user_id}}"
 
