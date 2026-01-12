@@ -7,8 +7,8 @@ from django.core.cache import cache
 from utils.CacheConfig import (
     CACHE_KEY_CLASS_LIST,
     CACHE_TIMEOUT_CLASS_LIST,
-    CAHCE_KEY_TEACHER_CLASS,
-    get_cache_timeout,  generate_cache_key, generate_filter_key
+    CACHE_KEY_TEACHER_CLASS,
+    get_cache_timeout, generate_cache_key, generate_filter_key, CACHE_TIMEOUT_TEACHER_CLASS
 )
 
 class TeacherClassesView(APIView):
@@ -41,7 +41,7 @@ class TeacherClassesView(APIView):
 
         # 生成缓存键
         cache_filters = generate_filter_key(filter_body)
-        cache_key = generate_cache_key(CAHCE_KEY_TEACHER_CLASS, filter=cache_filters, user_id=user_id, page=page, size=page_size)
+        cache_key = generate_cache_key(CACHE_KEY_TEACHER_CLASS, filter=cache_filters, user_id=user_id, page=page, size=page_size)
         cache_data = cache.get(cache_key)
         if cache_data:
             return MyResponse.success(data=cache_data)
@@ -80,5 +80,5 @@ class TeacherClassesView(APIView):
             "page": page,
             "size": page_size
         }
-        cache.set(cache_key, response_data, get_cache_timeout(CACHE_TIMEOUT_CLASS_LIST))
+        cache.set(cache_key, response_data, get_cache_timeout(CACHE_TIMEOUT_TEACHER_CLASS))
         return MyResponse.success(data=response_data)

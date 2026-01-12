@@ -45,6 +45,9 @@ CACHE_TIMEOUT_SYSTEM_STATISTICS = 300       # 系统统计：5分钟
 # 学生相关
 CACHE_TIMEOUT_STUDENT_CLASS = 600           # 学生班级信息：10分钟
 
+# 教师相关
+CACHE_TIMEOUT_TEACHER_CLASS = 300           # 教师班级列表：5分钟
+
 # 处理空结构超时时间
 CACHE_TIMEOUT_EMPTY_RESULT = 60  
 
@@ -57,6 +60,7 @@ CACHE_PREFIX_QUESTION = "question"
 CACHE_PREFIX_EXAM = "exam"
 CACHE_PREFIX_USER = "user"
 CACHE_PREFIX_CLASS = "class"
+CACHE_PREFIX_TEACHER = "teacher"
 CACHE_PREFIX_MISTAKE = "mistake"
 CACHE_PREFIX_STATISTICS = "statistics"
 
@@ -83,7 +87,7 @@ CACHE_KEY_EXAM_RANKING = f"{CACHE_PREFIX_EXAM}:ranking:{{exam_id}}:{{class_id}}:
 CACHE_KEY_SYSTEM_STATISTICS = f"{CACHE_PREFIX_STATISTICS}:system"
 
 # 教师相关
-CAHCE_KEY_TEACHER_CLASS = f"teacher:class:{{filter}}:{{user_id}}:{{page}}:{{size}}"
+CACHE_KEY_TEACHER_CLASS = f"{CACHE_PREFIX_TEACHER}:class:{{filter}}:{{user_id}}:{{page}}:{{size}}"
 
 # 学生相关
 CACHE_KEY_STUDENT_CLASS = f"{CACHE_PREFIX_USER}:class:{{user_id}}"
@@ -165,13 +169,23 @@ CACHE_VERSION = {
     "exam": 1,
     "user": 1,
     "class": 1,
+    "teacher": 1,
     "mistake": 1,
 }
 
 def custom_cache_key(key, key_prefix, version):
     """
     自定义缓存键生成函数
+    Args:
+        key: 原始缓存键
+        key_prefix: Django缓存框架传递的前缀（当前实现中未使用）
+        version: Django缓存框架传递的版本号（当前实现中未使用）
+
+    Returns:
+        带版本号的缓存键，格式: :{version}:{key}
     """
+
+
     if ":" in key:
         module_prefix = key.split(":")[0]
         cache_version = CACHE_VERSION.get(module_prefix, "1")

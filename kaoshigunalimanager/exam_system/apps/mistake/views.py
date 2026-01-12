@@ -457,7 +457,7 @@ class MistakeExportView(APIView):
             return response
         except Exception as e:
             logger.error(f"学生 {user.username} 导出错题本失败: {e}")
-            return MyResponse.filed(f"导出文件是发生错误，{e}")
+            return MyResponse.failed(f"导出文件是发生错误，{e}")
 
 
 

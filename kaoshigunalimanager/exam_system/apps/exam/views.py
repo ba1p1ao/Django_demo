@@ -827,8 +827,16 @@ class ExamSubmitView(APIView):
                 logger.info(f"学生 {payload.get('username')} 提交试卷成功: {exam_record.exam.title}，得分: {total_score}")
                 # 清除错题本缓存
                 cache_delete_pattern("mistake:list:*")
-                cache_delete_pattern("class:statistics:*")
+                # 清除可参加考试列表缓存
+                cache_delete_pattern("exam:available:*")
                 cache_delete_pattern("exam:ranking:*")
+                # 清除考试统计缓存
+                cache_delete_pattern("exam:statistics:*")
+                # 清除班级排名缓存（因为学生成绩变化了）
+                cache_delete_pattern("class:ranking:*")
+                cache_delete_pattern("class:statistics:*")
+                # 清除班级趋势缓存
+                cache_delete_pattern("class:trend:*")
                 cache.delete(generate_cache_key(CACHE_KEY_STUDENT_CLASS, user_id=payload.get("id")))
                 cache_delete_pattern("user:statistics:*")
                 # 清除系统统计缓存

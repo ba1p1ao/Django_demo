@@ -15,9 +15,16 @@ from utils.CacheConfig import (
     CACHE_TIMEOUT_CLASS_STATISTICS,
     CACHE_KEY_CLASS_RANKING,
     CACHE_TIMEOUT_CLASS_RANKING,
-    generate_cache_key, get_cache_timeout,
-    generate_filter_key, CACHE_KEY_CLASS_MEMBERS, CACHE_TIMEOUT_CLASS_MEMBERS, CACHE_TIMEOUT_EMPTY_RESULT,
-    CACHE_KEY_STUDENT_CLASS
+    CACHE_KEY_CLASS_TREND,
+    CACHE_TIMEOUT_CLASS_TREND,
+    CACHE_KEY_CLASS_MEMBERS,
+    CACHE_TIMEOUT_CLASS_MEMBERS,
+    CACHE_TIMEOUT_EMPTY_RESULT,
+    CACHE_KEY_STUDENT_CLASS,
+    generate_cache_key,
+    generate_filter_key,
+    get_cache_timeout,
+
 )
 from utils.CacheTools import cache_delete_pattern
 from django.core.cache import cache
@@ -658,7 +665,20 @@ class ClassScoreTrendView(APIView):
 
         request_data = request.GET
 
+        # 获取该班级关联的day天前的试卷id
+        days = int(request_data.get("days", 7))
+        # 获取当前本地时间
+        current_time = timezone.localtime()
+        # 计算days天前的时间
+        days_ago_time = current_time - timedelta(days=days)
         # 获取班级信息
+
+        # 构建缓存键
+        cache_key = generate_cache_key(CACHE_KEY_CLASS_TREND, class_id=class_id, days=days)
+        cache_data = cache.get(cache_key)
+        if cache_data:
+            return MyResponse.success(data=cache_data)
+
         class_obj = Class.objects.get(id=class_id)
         response_data = {
             "class_id": class_id,
@@ -677,13 +697,6 @@ class ClassScoreTrendView(APIView):
             status=1
         )
         cur_class_student_ids = [s.id for s in cur_class_students]
-
-        # 获取该班级关联的day天前的试卷id
-        days = int(request_data.get("days", 7))
-        # 获取当前本地时间
-        current_time = timezone.localtime()
-        # 计算days天前的时间
-        days_ago_time = current_time - timedelta(days=days)
 
         cur_class_exam = Exam.objects.filter(
             status='published',
@@ -738,4 +751,6 @@ class ClassScoreTrendView(APIView):
         response_data["lowest_average"] = round(lowest_average / total_exams or 0, 2)
         response_data["pass_rate"] = round(pass_rate / total_exams or 0, 2)
 
+        # 设置缓存
+        cache.set(cache_key, response_data, get_cache_timeout(CACHE_TIMEOUT_CLASS_TREND))
         return MyResponse.success(data=response_data)
