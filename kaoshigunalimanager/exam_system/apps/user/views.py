@@ -10,6 +10,7 @@ from utils.CacheConfig import generate_cache_key, CACHE_KEY_USER_INFO
 from utils.ResponseMessage import MyResponse
 from utils.PasswordEncode import verify_password, hash_password
 from utils.JWTAuth import create_token
+from utils.CacheConfig import CACHE_KEY_SYSTEM_STATISTICS
 
 logger = logging.getLogger('apps')
 
@@ -90,6 +91,8 @@ class UserRegisterView(APIView):
         if user_serializer.is_valid():
             user_serializer.save()
             logger.info(f"用户 {username} 注册成功，角色: {role}")
+            # 清除系统统计缓存
+            cache.delete(CACHE_KEY_SYSTEM_STATISTICS)
             return MyResponse.success(message="注册成功", data={"id": user_serializer.data.get("id")})
 
         logger.error(f"注册失败: {user_serializer.errors}")
