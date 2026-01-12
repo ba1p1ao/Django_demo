@@ -6,6 +6,19 @@ from apps.exam.models import Exam, ExamRecord
 from apps.question.models import Question
 from apps.user.serializers import UserSerializers
 from utils.ResponseMessage import check_permission, check_auth, MyResponse
+from utils.CacheConfig import (
+    CACHE_KEY_USER_INFO,
+    CACHE_TIMEOUT_USER_INFO,
+    CACHE_KEY_USER_LIST,
+    CACHE_TIMEOUT_USER_LIST,
+    CACHE_KEY_USER_STATISTICS,
+    CACHE_TIMEOUT_USER_STATISTICS,
+    CACHE_KEY_SYSTEM_STATISTICS,
+    generate_cache_key,
+    generate_filter_key,
+)
+from utils.CacheTools import cache_delete_pattern
+from django.core.cache import cache
 
 logger = logging.getLogger('apps')
 
@@ -45,6 +58,16 @@ class UserListView(APIView):
         page = int(request_data.get("page", 1))
         page_size = int(request_data.get("size", 10))
         offset = (page - 1) * page_size
+
+        # 构建缓存键
+        cache_filters = generate_filter_key(filter_body)
+        cache_key = generate_cache_key(
+            CACHE_KEY_USER_LIST, filter=cache_filters, class_id=class_id, page=page, size=page_size
+        )
+        # 获取缓存数据
+        cache_data = cache.get(cache_key)
+        if cache_data:
+            return MyResponse.success(data=cache_data)
 
         users = User.objects.filter(**filter_body)
 
@@ -93,6 +116,8 @@ class UserListView(APIView):
             "size": page_size,
         }
 
+        # 设置缓存
+        cache.set(cache_key, response_data, CACHE_TIMEOUT_USER_LIST)
         return MyResponse.success(data=response_data)
 
 
@@ -100,7 +125,13 @@ class UserStatisticsView(APIView):
     @check_permission
     def get(self, request):
         payload = request.user
-        
+
+        # 构建缓存键
+        cache_key = generate_cache_key(CACHE_KEY_USER_STATISTICS)
+        cache_data = cache.get(cache_key)
+        if cache_data:
+            return MyResponse.success(data=cache_data)
+
         users = User.objects.all()
         total_users = users.count()
         response_data = {
@@ -123,7 +154,8 @@ class UserStatisticsView(APIView):
                 response_data["active_users"] += 1
             elif user.status == 0:
                 response_data["disabled_users"] += 1
-        
+        # 设置缓存
+        cache.set(cache_key, response_data, CACHE_TIMEOUT_USER_STATISTICS)
         return MyResponse.success(data=response_data)
     
 
@@ -131,6 +163,12 @@ class UserInfoView(APIView):
     @check_permission
     def get(self, request, user_id):
         payload = request.user
+
+        # 构建缓存键
+        cache_key = generate_cache_key(CACHE_KEY_USER_INFO, user_id=user_id)
+        cache_data = cache.get(cache_key)
+        if cache_data:
+            return MyResponse.success(data=cache_data)
 
         try:
             user = User.objects.get(id=user_id)
@@ -147,6 +185,8 @@ class UserInfoView(APIView):
             ser_user_data["question_count"] = question_count
             ser_user_data["record_count"] = record_count
 
+            # 设置缓存
+            cache.set(cache_key, ser_user_data, CACHE_TIMEOUT_USER_INFO)
             return MyResponse.success(data=ser_user_data)
         except Exception as e:
             logger.error(f"获取用户详情失败，用户ID: {user_id}，错误: {e}")
@@ -198,6 +238,15 @@ class UserInfoView(APIView):
             return MyResponse.failed("用户删除失败")
 
         logger.info(f"管理员 {admin_username} 删除用户: {user.username} (ID: {user_id})")
+        # 清除用户列表缓存
+        cache_delete_pattern("user:list:*")
+        # 清除用户详情缓存
+        cache.delete(generate_cache_key(CACHE_KEY_USER_INFO, user_id=user_id))
+        # 删除用户统计缓存
+        cache.delete(generate_cache_key(CACHE_KEY_USER_STATISTICS))
+        cache_delete_pattern("class:members:*")
+        # 清除系统统计缓存
+        cache.delete(CACHE_KEY_SYSTEM_STATISTICS)
         return MyResponse.success("用户删除成功")
 
 
@@ -225,6 +274,13 @@ class UserUpdateStatusView(APIView):
             return MyResponse.failed(message="修改用户状态失败")
 
         logger.info(f"管理员 {admin_username} 修改用户状态: {user.username} -> {status_text}")
+        # 清除用户列表缓存
+        cache_delete_pattern("user:list:*")
+        # 清除用户详情缓存
+        cache.delete(generate_cache_key(CACHE_KEY_USER_INFO, user_id=user_id))
+        # 删除用户统计缓存
+        cache.delete(generate_cache_key(CACHE_KEY_USER_STATISTICS))
+
         return MyResponse.success("修改用户状态成功")
 
 
@@ -252,6 +308,13 @@ class UserUpdateRoleView(APIView):
             return MyResponse.failed(message="修改用户角色失败")
 
         logger.info(f"管理员 {admin_username} 修改用户角色: {user.username} -> {role_map.get(role, role)}")
+        # 清除用户列表缓存
+        cache_delete_pattern("user:list:*")
+        # 清除用户详情缓存
+        cache.delete(generate_cache_key(CACHE_KEY_USER_INFO, user_id=user_id))
+        # 删除用户统计缓存
+        cache.delete(generate_cache_key(CACHE_KEY_USER_STATISTICS))
+
         return MyResponse.success("修改用户角色成功")
     
     
