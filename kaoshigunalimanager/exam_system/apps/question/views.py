@@ -17,7 +17,7 @@ from utils.CacheConfig import (
     CACHE_KEY_QUESTION_DETAIL,
     CACHE_TIMEOUT_QUESTION_DETAIL,
     generate_cache_key,
-    generate_filter_key
+    generate_filter_key, CACHE_KEY_SYSTEM_STATISTICS, CACHE_TIMEOUT_EMPTY_RESULT
 )
 from utils.CacheTools import cache_delete_pattern
 from django.core.cache import cache
@@ -80,7 +80,7 @@ class QuestionListView(APIView):
         offset = (page - 1) * page_size
 
         # 生成缓存键
-        filters = generate_filter_key(request_data)
+        filters = generate_filter_key(filter_body)
         cache_key = generate_cache_key(
             CACHE_KEY_QUESTION_LIST, filter=filters, page=page, size=page_size
         )
@@ -99,7 +99,10 @@ class QuestionListView(APIView):
             "size": page_size,
         }
         # 这是缓存
-        cache.set(cache_key, response_data, CACHE_TIMEOUT_QUESTION_LIST)
+        if not ser_data:
+            cache.set(cache_key, response_data, CACHE_TIMEOUT_EMPTY_RESULT)
+        else:
+            cache.set(cache_key, response_data, CACHE_TIMEOUT_QUESTION_LIST)
         return MyResponse.success(data=response_data)
 
 
@@ -148,9 +151,13 @@ class QuestionInfoView(RetrieveAPIView, UpdateAPIView, DestroyAPIView):
                 question_ser.save()
                 logger.info(f"题目 ID {question.id} 更新成功")
                 cache.delete(generate_cache_key(CACHE_KEY_QUESTION_DETAIL, id=question.id))
-                cache_delete_pattern(":1:question:list:*")
+                cache_delete_pattern("question:list:*")
                 # 清除包含该题目的考试题目缓存
-                cache_delete_pattern(":1:exam:questions:*")
+                cache_delete_pattern("exam:questions:*")
+                cache_delete_pattern("class:ranking:*")
+                cache_delete_pattern("class:trend:*")
+                # 清除系统统计缓存
+                cache.delete(CACHE_KEY_SYSTEM_STATISTICS)
                 return MyResponse.success("更新成功")
         except Exception as e:
             logger.error(f"题目 ID {question.id} 更新失败: {e}")
@@ -165,9 +172,13 @@ class QuestionInfoView(RetrieveAPIView, UpdateAPIView, DestroyAPIView):
         self.perform_destroy(question)
         logger.info(f"题目 ID {question_id} 删除成功")
         cache.delete(generate_cache_key(CACHE_KEY_QUESTION_DETAIL, id=question_id))
-        cache_delete_pattern(":1:question:list:*")
+        cache_delete_pattern("question:list:*")
         # 清除包含该题目的考试题目缓存
-        cache_delete_pattern(":1:exam:questions:*")
+        cache_delete_pattern("exam:questions:*")
+        cache_delete_pattern("class:ranking:*")
+        cache_delete_pattern("class:trend:*")
+        # 清除系统统计缓存
+        cache.delete(CACHE_KEY_SYSTEM_STATISTICS)
         return MyResponse.success("删除成功")
 
 
@@ -189,7 +200,9 @@ class QuestionAddView(CreateAPIView):
             if question_ser.is_valid(raise_exception=True):
                 question_ser.save()
                 logger.info(f"用户 {payload.get('username')} 添加题目成功")
-                cache_delete_pattern(":1:question:list:*")
+                cache_delete_pattern("question:list:*")
+                # 清除系统统计缓存
+                cache.delete(CACHE_KEY_SYSTEM_STATISTICS)
                 return MyResponse.success(message='添加成功', data={"id": payload.get("id")})
         except Exception as e:
             logger.error(f"用户 {payload.get('username')} 添加题目失败: {e}")
@@ -214,9 +227,11 @@ class QuestionDeleteListView(APIView):
         if delete_count:
             logger.info(f"用户 {payload.get('username')} 批量删除题目成功，数量: {len(ids)}")
             cache.delete_many([generate_cache_key(CACHE_KEY_QUESTION_DETAIL, id=id) for id in ids])
-            cache_delete_pattern(":1:question:list:*")
+            cache_delete_pattern("question:list:*")
             # 清除包含这些题目的考试题目缓存
-            cache_delete_pattern(":1:exam:questions:*")
+            cache_delete_pattern("exam:questions:*")
+            # 清除系统统计缓存
+            cache.delete(CACHE_KEY_SYSTEM_STATISTICS)
             return MyResponse.success(message="批量删除成功")
 
         return MyResponse.other(code=404, message="请选择要删除的题目")
@@ -281,7 +296,9 @@ class QuestionImportView(APIView):
                 response_data["failed_list"] = failed_list
                 logger.info(f"用户 {current_user.username} 导入题目成功，成功: {success_count}，失败: {failed_count}")
                 # 清除题目列表缓存
-                cache_delete_pattern(":1:question:list:*")
+                cache_delete_pattern("question:list:*")
+                # 清除系统统计缓存
+                cache.delete(CACHE_KEY_SYSTEM_STATISTICS)
                 return MyResponse.success(message="题目导入成功", data=response_data)
         except Exception as e:
             logger.error(f"用户 {payload.get('username')} 导入题目失败: {e}")
