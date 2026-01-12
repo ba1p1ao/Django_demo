@@ -8,6 +8,19 @@ from apps.classes.models import Class, UserClass
 from apps.exam.models import ExamRecord, Exam, ExamClass
 from apps.user.models import User
 from utils.ResponseMessage import check_auth, check_permission, MyResponse
+from utils.CacheConfig import (
+    CACHE_KEY_CLASS_LIST,
+    CACHE_TIMEOUT_CLASS_LIST,
+    CACHE_KEY_CLASS_STATISTICS,
+    CACHE_TIMEOUT_CLASS_STATISTICS,
+    CACHE_KEY_CLASS_RANKING,
+    CACHE_TIMEOUT_CLASS_RANKING,
+    generate_cache_key,
+    generate_filter_key, CACHE_KEY_CLASS_MEMBERS, CACHE_TIMEOUT_CLASS_MEMBERS, CACHE_TIMEOUT_EMPTY_RESULT,
+    CACHE_KEY_STUDENT_CLASS
+)
+from utils.CacheTools import cache_delete_pattern
+from django.core.cache import cache
 
 logger = logging.getLogger('apps')
 
@@ -49,6 +62,17 @@ class ClassListView(APIView):
                 filter_body[k] = v
 
         offset = (page - 1) * page_size
+
+        # 构建缓存键
+        cache_filters = generate_filter_key(filter_body)
+        cache_key = generate_cache_key(
+            CACHE_KEY_CLASS_LIST, filter=cache_filters, page=page, size=page_size
+        )
+        # 获取缓存数据
+        cache_data = cache.get(cache_key)
+        if cache_data:
+            return MyResponse.success(data=cache_data)
+
         classes = Class.objects.filter(**filter_body).annotate(
             student_count=Count("userclass__user")
         )
@@ -74,6 +98,11 @@ class ClassListView(APIView):
                 class_data["status"] = c.status
                 class_data["create_time"] = c.create_time.strftime("%Y-%m-%d %H:%M:%S")
                 response_data["list"].append(class_data)
+            # 设置缓存
+            if not page_list:
+                cache.set(cache_key, response_data, CACHE_TIMEOUT_EMPTY_RESULT)
+            else:
+                cache.set(cache_key, response_data, CACHE_TIMEOUT_CLASS_LIST)
             return MyResponse.success(data=response_data)
         except Exception as e:
             return MyResponse.failed(message=f"获取班级信息出错，{e}")
@@ -106,6 +135,8 @@ class ClassCreateView(APIView):
             # 修改用户表中的class_id
             User.objects.filter(id=user_teacher.id).update(class_id=create_class.id)
             logger.info(f"用户 {payload.get('username')} 创建班级成功: {create_class.name}")
+            # 清除班级列表缓存
+            cache_delete_pattern("class:list:*")
             return MyResponse.success(message="班级添加成功")
         except Exception as e:
             logger.error(f"用户 {payload.get('username')} 创建班级失败: {e}")
@@ -126,6 +157,10 @@ class ClassView(APIView):
             return MyResponse.failed(message="班级信息不存在")
 
         logger.info(f"用户 {payload.get('username')} 更新班级成功，班级ID: {class_id}")
+        # 清除班级列表缓存
+        cache_delete_pattern("class:list:*")
+        # 清除班级统计缓存
+        cache_delete_pattern("class:statistics:*")
         return MyResponse.success(message="修改成功")
 
     @check_permission
@@ -138,6 +173,12 @@ class ClassView(APIView):
             class_obj.delete()
 
             logger.info(f"用户 {payload.get('username')} 删除班级成功: {class_obj.name}")
+            # 清除班级列表缓存
+            cache_delete_pattern("class:list:*")
+            # 清除班级统计缓存
+            cache_delete_pattern("class:statistics:*")
+            cache_delete_pattern("class:members:*")
+
             return MyResponse.success(message="删除成功")
         except Class.DoesNotExist:
             return MyResponse.failed(message="班级信息不存在")
@@ -159,6 +200,10 @@ class ClassStatusView(APIView):
             if update_class == 0:
                 return MyResponse.failed(message="班级信息不存在")
 
+            # 清除班级列表缓存
+            cache_delete_pattern("class:list:*")
+            # 清除班级统计缓存
+            cache_delete_pattern("class:statistics:*")
             return MyResponse.success(message="修改成功")
         except Class.DoesNotExist:
             return MyResponse.failed(message="班级信息不存在")
@@ -168,6 +213,12 @@ class ClassStatisticsView(APIView):
     @check_permission
     def get(self, request, class_id):
         payload = request.user
+
+        # 构建缓存键
+        cache_key = generate_cache_key(CACHE_KEY_CLASS_STATISTICS, class_id=class_id)
+        cache_data = cache.get(cache_key)
+        if cache_data:
+            return MyResponse.success(data=cache_data)
 
         try:
             class_obj = Class.objects.get(id=class_id)
@@ -249,6 +300,8 @@ class ClassStatisticsView(APIView):
             else:
                 response_data["score_distribution"]["0-59"] += 1
 
+        # 设置缓存
+        cache.set(cache_key, response_data, CACHE_TIMEOUT_CLASS_STATISTICS)
         return MyResponse.success(data=response_data)
 
 
@@ -257,16 +310,22 @@ class ClassMembersView(APIView):
     def get(self, request, class_id):
         payload = request.user
 
-        try:
-            class_obj = Class.objects.get(id=class_id)
-        except Class.DoesNotExist:
-            return MyResponse.failed(message="班级信息不存在")
-
         page = int(request.GET.get("page", 1))
         page_size = int(request.GET.get("size", 10))
         offset = (page - 1) * page_size
 
         role = request.GET.get("role", "")
+
+        # 构建缓存键
+        cache_key = generate_cache_key(CACHE_KEY_CLASS_MEMBERS, class_id=class_id, role=role, page=page, size=page_size)
+        cache_data = cache.get(cache_key)
+        if cache_data:
+            return MyResponse.success(data=cache_data)
+
+        try:
+            class_obj = Class.objects.get(id=class_id)
+        except Class.DoesNotExist:
+            return MyResponse.failed(message="班级信息不存在")
 
         user_class_qs = UserClass.objects.filter(class_info=class_id)
 
@@ -301,6 +360,8 @@ class ClassMembersView(APIView):
             }
             response_data["list"].append(data)
 
+        # 设置缓存
+        cache.set(cache_key, response_data, CACHE_TIMEOUT_CLASS_MEMBERS)
         return MyResponse.success(data=response_data)
 
 
@@ -362,6 +423,13 @@ class ClassMembersAddView(APIView):
         }
 
         logger.info(f"用户 {payload.get('username')} 添加班级成员成功，班级: {class_obj.name}，成功: {len(created_objects)}，失败: {len(failed_ids)}")
+        # 清除班级列表缓存
+        cache_delete_pattern("class:list:*")
+        # 清除班级统计缓存
+        cache_delete_pattern("class:statistics:*")
+        # 清除班级成员列表缓存
+        cache_delete_pattern("class:members:*")
+
         return MyResponse.success(data=response_data)
 
 
@@ -421,6 +489,20 @@ class ClassMembersRemoveView(APIView):
         }
 
         logger.info(f"用户 {payload.get('username')} 移除班级成员成功，班级: {class_obj.name}，成功: {deleted_count}，失败: {len(failed_ids)}")
+        # 清除班级列表缓存
+        cache_delete_pattern("class:list:*")
+        # 清除班级统计缓存
+        cache_delete_pattern("class:statistics:*")
+        # 清除班级成员列表缓存
+        cache_delete_pattern("class:members:*")
+        # 清除班级排名缓存
+        cache_delete_pattern("class:ranking:*")
+        # 清除班级成绩趋势缓存
+        cache_delete_pattern("class:trend:*")
+        # 清除学生班级信息缓存
+        for user_id in existing_user_ids:
+            cache.delete(generate_cache_key(CACHE_KEY_STUDENT_CLASS, user_id=user_id))
+
         return MyResponse.success(data=response_data)
 
 
@@ -464,6 +546,13 @@ class ClassExamRankingView(APIView):
         page = int(request_data.get("page"))
         page_size = int(request_data.get("size"))
         offset = (page - 1) * page_size
+
+        # 构建缓存键
+        cache_key = generate_cache_key(CACHE_KEY_CLASS_RANKING, class_id=class_id, exam_id=exam_id, page=page, size=page_size)
+        cache_data = cache.get(cache_key)
+        if cache_data:
+            return MyResponse.success(data=cache_data)
+
         # 获取班级信息
         class_obj = Class.objects.get(id=class_id)
         response_data = {
@@ -553,6 +642,9 @@ class ClassExamRankingView(APIView):
         rank_list_page = rank_list[offset:offset+page_size]
         response_data["list"] = rank_list_page
 
+        # 设置缓存
+        cache.set(cache_key, response_data, CACHE_TIMEOUT_CLASS_RANKING)
+
         return MyResponse.success(data=response_data)
 
 
@@ -621,14 +713,14 @@ class ClassScoreTrendView(APIView):
                 output_field=FloatField()
             ))
         )
-        average_score=0
-        highest_averag=0
-        lowest_average=0
-        pass_rate=0
+        average_score = 0
+        highest_average = 0
+        lowest_average = 0
+        pass_rate = 0
 
         for exam_state in class_exam_state:
             average_score += exam_state["average_score"]
-            highest_averag += exam_state["highest_score"]
+            highest_average += exam_state["highest_score"]
             lowest_average += exam_state["lowest_score"]
             pass_rate += exam_state["pass_rate"]
             eid = exam_state["exam_id"]
