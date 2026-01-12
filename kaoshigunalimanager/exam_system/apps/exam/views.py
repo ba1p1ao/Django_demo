@@ -27,7 +27,7 @@ from utils.CacheConfig import (
     CACHE_TIMEOUT_EXAM_DETAIL,
     CACHE_KEY_EXAM_AVAILABLE,
     CACHE_TIMEOUT_EXAM_AVAILABLE,
-    generate_cache_key,
+    generate_cache_key, get_cache_timeout,
     generate_filter_key, CACHE_KEY_EXAM_QUESTIONS, CACHE_TIMEOUT_EXAM_QUESTIONS,
     CACHE_KEY_EXAM_RECORD_DETAIL,
     CACHE_TIMEOUT_EXAM_RECORD_DETAIL,
@@ -104,7 +104,7 @@ class ExamListView(APIView):
             }
 
             # 添加缓存
-            cache.set(cache_key, response_data, CACHE_TIMEOUT_EXAM_LIST)
+            cache.set(cache_key, response_data, get_cache_timeout(CACHE_TIMEOUT_EXAM_LIST))
             return MyResponse.success(data=response_data)
 
         except Exception as e:
@@ -235,7 +235,7 @@ class ExamModelViewSet(viewsets.ModelViewSet):
             return MyResponse.failed(message=f"试卷获取失败: {str(e)}")
 
         # 设置缓存
-        cache.set(cache_key, exam_info, CACHE_TIMEOUT_EXAM_DETAIL)
+        cache.set(cache_key, exam_info, get_cache_timeout(CACHE_TIMEOUT_EXAM_DETAIL))
         return MyResponse.success(data=exam_info)
     
     
@@ -521,7 +521,7 @@ class ExamAvailableView(generics.ListAPIView):
         exam_ser_data = self.get_serializer(instance=valid_exam_list, many=True).data
 
         # 设置缓存
-        cache.set(cache_key, exam_ser_data, CACHE_TIMEOUT_EXAM_AVAILABLE)
+        cache.set(cache_key, exam_ser_data, get_cache_timeout(CACHE_TIMEOUT_EXAM_AVAILABLE))
         return MyResponse.success(data=exam_ser_data)
               
 
@@ -652,7 +652,7 @@ class ExamQuestionsView(APIView):
                 "saved_answers": saved_answers
             }
             # 设置缓存
-            cache.set(cache_key, response_data, CACHE_TIMEOUT_EXAM_QUESTIONS)
+            cache.set(cache_key, response_data, get_cache_timeout(CACHE_TIMEOUT_EXAM_QUESTIONS))
             return MyResponse.success(data=response_data)
         except Exception as e:
             return MyResponse.failed(message="该试卷发生错误，请联系老师或管理员")
@@ -948,7 +948,7 @@ class ExamRecordDetailView(APIView):
 
         ser_answer_record_data = ExamRecordDetailSerializer(instance=exam_record).data
         # 设置缓存
-        cache.set(cache_key, ser_answer_record_data, CACHE_TIMEOUT_EXAM_RECORD_DETAIL)
+        cache.set(cache_key, ser_answer_record_data, get_cache_timeout(CACHE_TIMEOUT_EXAM_RECORD_DETAIL))
         return MyResponse.success(data=ser_answer_record_data)
 
 class ExamRecordStatisticsView(APIView):
@@ -1041,7 +1041,7 @@ class ExamRecordStatisticsView(APIView):
         }
 
         # 设置缓存
-        cache.set(cache_key, response_data, CACHE_TIMEOUT_EXAM_RECORD_STATISTICS)
+        cache.set(cache_key, response_data, get_cache_timeout(CACHE_TIMEOUT_EXAM_RECORD_STATISTICS))
         return MyResponse.success(data=response_data)
        
 
@@ -1155,7 +1155,7 @@ class SystemStatisticsView(APIView):
         }
 
         # 设置缓存
-        cache.set(cache_key, response_data, CACHE_TIMEOUT_SYSTEM_STATISTICS)
+        cache.set(cache_key, response_data, get_cache_timeout(CACHE_TIMEOUT_SYSTEM_STATISTICS))
         return MyResponse.success(data=response_data)
 
 
@@ -1234,7 +1234,7 @@ class ExamRankingView(APIView):
 
             response_data["list"] = response_data["list"][offset:offset + page_size]
             # 设置缓存
-            cache.set(cache_key, response_data, CACHE_TIMEOUT_EXAM_RANKING)
+            cache.set(cache_key, response_data, get_cache_timeout(CACHE_TIMEOUT_EXAM_RANKING))
             return MyResponse.success(data=response_data)
         except Exception as e:
             return MyResponse.failed(message="排名信息获取失败")

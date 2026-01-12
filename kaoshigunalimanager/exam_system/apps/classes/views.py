@@ -15,7 +15,7 @@ from utils.CacheConfig import (
     CACHE_TIMEOUT_CLASS_STATISTICS,
     CACHE_KEY_CLASS_RANKING,
     CACHE_TIMEOUT_CLASS_RANKING,
-    generate_cache_key,
+    generate_cache_key, get_cache_timeout,
     generate_filter_key, CACHE_KEY_CLASS_MEMBERS, CACHE_TIMEOUT_CLASS_MEMBERS, CACHE_TIMEOUT_EMPTY_RESULT,
     CACHE_KEY_STUDENT_CLASS
 )
@@ -100,9 +100,9 @@ class ClassListView(APIView):
                 response_data["list"].append(class_data)
             # 设置缓存
             if not page_list:
-                cache.set(cache_key, response_data, CACHE_TIMEOUT_EMPTY_RESULT)
+                cache.set(cache_key, response_data, get_cache_timeout(CACHE_TIMEOUT_EMPTY_RESULT))
             else:
-                cache.set(cache_key, response_data, CACHE_TIMEOUT_CLASS_LIST)
+                cache.set(cache_key, response_data, get_cache_timeout(CACHE_TIMEOUT_CLASS_LIST))
             return MyResponse.success(data=response_data)
         except Exception as e:
             return MyResponse.failed(message=f"获取班级信息出错，{e}")
@@ -301,7 +301,7 @@ class ClassStatisticsView(APIView):
                 response_data["score_distribution"]["0-59"] += 1
 
         # 设置缓存
-        cache.set(cache_key, response_data, CACHE_TIMEOUT_CLASS_STATISTICS)
+        cache.set(cache_key, response_data, get_cache_timeout(CACHE_TIMEOUT_CLASS_STATISTICS))
         return MyResponse.success(data=response_data)
 
 
@@ -361,7 +361,7 @@ class ClassMembersView(APIView):
             response_data["list"].append(data)
 
         # 设置缓存
-        cache.set(cache_key, response_data, CACHE_TIMEOUT_CLASS_MEMBERS)
+        cache.set(cache_key, response_data, get_cache_timeout(CACHE_TIMEOUT_CLASS_MEMBERS))
         return MyResponse.success(data=response_data)
 
 
@@ -643,7 +643,7 @@ class ClassExamRankingView(APIView):
         response_data["list"] = rank_list_page
 
         # 设置缓存
-        cache.set(cache_key, response_data, CACHE_TIMEOUT_CLASS_RANKING)
+        cache.set(cache_key, response_data, get_cache_timeout(CACHE_TIMEOUT_CLASS_RANKING))
 
         return MyResponse.success(data=response_data)
 

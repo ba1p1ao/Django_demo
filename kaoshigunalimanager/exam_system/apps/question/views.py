@@ -17,7 +17,8 @@ from utils.CacheConfig import (
     CACHE_KEY_QUESTION_DETAIL,
     CACHE_TIMEOUT_QUESTION_DETAIL,
     generate_cache_key,
-    generate_filter_key, CACHE_KEY_SYSTEM_STATISTICS, CACHE_TIMEOUT_EMPTY_RESULT
+    generate_filter_key, CACHE_KEY_SYSTEM_STATISTICS, CACHE_TIMEOUT_EMPTY_RESULT,
+    get_cache_timeout,
 )
 from utils.CacheTools import cache_delete_pattern
 from django.core.cache import cache
@@ -100,9 +101,9 @@ class QuestionListView(APIView):
         }
         # 这是缓存
         if not ser_data:
-            cache.set(cache_key, response_data, CACHE_TIMEOUT_EMPTY_RESULT)
+            cache.set(cache_key, response_data, get_cache_timeout(CACHE_TIMEOUT_EMPTY_RESULT))
         else:
-            cache.set(cache_key, response_data, CACHE_TIMEOUT_QUESTION_LIST)
+            cache.set(cache_key, response_data, get_cache_timeout(CACHE_TIMEOUT_QUESTION_LIST))
         return MyResponse.success(data=response_data)
 
 
@@ -134,7 +135,7 @@ class QuestionInfoView(RetrieveAPIView, UpdateAPIView, DestroyAPIView):
             return MyResponse.success(data=cache_data)
 
         ser_data = self.get_serializer(instance=question).data
-        cache.set(cache_key, ser_data, CACHE_TIMEOUT_QUESTION_DETAIL)
+        cache.set(cache_key, ser_data, get_cache_timeout(CACHE_TIMEOUT_QUESTION_DETAIL))
         return MyResponse.success(data=ser_data)
 
     def update(self, request, *args, **kwargs):

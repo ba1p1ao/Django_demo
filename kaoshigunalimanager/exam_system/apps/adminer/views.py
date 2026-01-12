@@ -16,6 +16,7 @@ from utils.CacheConfig import (
     CACHE_KEY_SYSTEM_STATISTICS,
     generate_cache_key,
     generate_filter_key,
+    get_cache_timeout,
 )
 from utils.CacheTools import cache_delete_pattern
 from django.core.cache import cache
@@ -117,7 +118,7 @@ class UserListView(APIView):
         }
 
         # 设置缓存
-        cache.set(cache_key, response_data, CACHE_TIMEOUT_USER_LIST)
+        cache.set(cache_key, response_data, get_cache_timeout(CACHE_TIMEOUT_USER_LIST))
         return MyResponse.success(data=response_data)
 
 
@@ -155,7 +156,7 @@ class UserStatisticsView(APIView):
             elif user.status == 0:
                 response_data["disabled_users"] += 1
         # 设置缓存
-        cache.set(cache_key, response_data, CACHE_TIMEOUT_USER_STATISTICS)
+        cache.set(cache_key, response_data, get_cache_timeout(CACHE_TIMEOUT_USER_STATISTICS))
         return MyResponse.success(data=response_data)
     
 
@@ -186,7 +187,7 @@ class UserInfoView(APIView):
             ser_user_data["record_count"] = record_count
 
             # 设置缓存
-            cache.set(cache_key, ser_user_data, CACHE_TIMEOUT_USER_INFO)
+            cache.set(cache_key, ser_user_data, get_cache_timeout(CACHE_TIMEOUT_USER_INFO))
             return MyResponse.success(data=ser_user_data)
         except Exception as e:
             logger.error(f"获取用户详情失败，用户ID: {user_id}，错误: {e}")

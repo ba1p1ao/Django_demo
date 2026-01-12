@@ -14,39 +14,39 @@ from urllib.parse import quote
 # 实时性要求高的缓存（考试相关）
 # 添加 0-20 秒的随机数，避免发生雪崩
 
-CACHE_TIMEOUT_EXAM_AVAILABLE = 60 + random.randint(0, 20)   # 可参加考试列表：1分钟
-CACHE_TIMEOUT_EXAM_QUESTIONS = 120 + random.randint(0, 20)        # 考试题目：2分钟
+CACHE_TIMEOUT_EXAM_AVAILABLE = 60     # 可参加考试列表：1分钟
+CACHE_TIMEOUT_EXAM_QUESTIONS = 120          # 考试题目：2分钟
 
 # 频繁查询但变更较少的缓存
-CACHE_TIMEOUT_QUESTION_LIST = 600 + random.randint(0, 20)         # 题库列表：10分钟
-CACHE_TIMEOUT_QUESTION_DETAIL = 300 + random.randint(0, 20)      # 题目详情：5分钟
-CACHE_TIMEOUT_EXAM_LIST = 300 + random.randint(0, 20)             # 试卷列表：5分钟
-CACHE_TIMEOUT_EXAM_DETAIL = 180 + random.randint(0, 20)           # 试卷详情：3分钟
-CACHE_TIMEOUT_USER_INFO = 300 + random.randint(0, 20)             # 用户信息：5分钟
-CACHE_TIMEOUT_USER_LIST = 300 + random.randint(0, 20)             # 用户列表：5分钟
-CACHE_TIMEOUT_CLASS_LIST = 600 + random.randint(0, 20)            # 班级列表：10分钟
-CACHE_TIMEOUT_MISTAKE_LIST = 300 + random.randint(0, 20)          # 错题列表：5分钟
+CACHE_TIMEOUT_QUESTION_LIST = 600           # 题库列表：10分钟
+CACHE_TIMEOUT_QUESTION_DETAIL = 300        # 题目详情：5分钟
+CACHE_TIMEOUT_EXAM_LIST = 300               # 试卷列表：5分钟
+CACHE_TIMEOUT_EXAM_DETAIL = 180             # 试卷详情：3分钟
+CACHE_TIMEOUT_USER_INFO = 300               # 用户信息：5分钟
+CACHE_TIMEOUT_USER_LIST = 300               # 用户列表：5分钟
+CACHE_TIMEOUT_CLASS_LIST = 600              # 班级列表：10分钟
+CACHE_TIMEOUT_MISTAKE_LIST = 300            # 错题列表：5分钟
 
 # 统计类数据缓存（计算成本高）
-CACHE_TIMEOUT_CLASS_STATISTICS = 900 + random.randint(0, 20)      # 班级统计：15分钟
-CACHE_TIMEOUT_CLASS_MEMBERS = 300 + random.randint(0, 20)         # 班级成员：5分钟
-CACHE_TIMEOUT_CLASS_TREND = 600 + random.randint(0, 20)           # 班级成绩趋势：10分钟
-CACHE_TIMEOUT_CLASS_RANKING = 300 + random.randint(0, 20)         # 班级考试排名：5分钟
-CACHE_TIMEOUT_USER_STATISTICS = 600 + random.randint(0, 20)       # 用户统计：10分钟
+CACHE_TIMEOUT_CLASS_STATISTICS = 900        # 班级统计：15分钟
+CACHE_TIMEOUT_CLASS_MEMBERS = 300           # 班级成员：5分钟
+CACHE_TIMEOUT_CLASS_TREND = 600             # 班级成绩趋势：10分钟
+CACHE_TIMEOUT_CLASS_RANKING = 300           # 班级考试排名：5分钟
+CACHE_TIMEOUT_USER_STATISTICS = 600         # 用户统计：10分钟
 
 # 考试记录相关
-CACHE_TIMEOUT_EXAM_RECORD_DETAIL = 120 + random.randint(0, 20)    # 考试记录详情：2分钟
-CACHE_TIMEOUT_EXAM_RECORD_STATISTICS = 600 + random.randint(0, 20)# 考试统计：10分钟
-CACHE_TIMEOUT_EXAM_RANKING = 300 + random.randint(0, 20)          # 考试排名：5分钟
+CACHE_TIMEOUT_EXAM_RECORD_DETAIL = 120      # 考试记录详情：2分钟
+CACHE_TIMEOUT_EXAM_RECORD_STATISTICS = 600  # 考试统计：10分钟
+CACHE_TIMEOUT_EXAM_RANKING = 300            # 考试排名：5分钟
 
 # 系统统计相关
-CACHE_TIMEOUT_SYSTEM_STATISTICS = 300 + random.randint(0, 20)     # 系统统计：5分钟
+CACHE_TIMEOUT_SYSTEM_STATISTICS = 300       # 系统统计：5分钟
 
 # 学生相关
-CACHE_TIMEOUT_STUDENT_CLASS = 600 + random.randint(0, 20)         # 学生班级信息：10分钟
+CACHE_TIMEOUT_STUDENT_CLASS = 600           # 学生班级信息：10分钟
 
 # 处理空结构超时时间
-CACHE_TIMEOUT_EMPTY_RESULT = 60 + random.randint(0, 20)
+CACHE_TIMEOUT_EMPTY_RESULT = 60  
 
 
 # ============================================
@@ -99,6 +99,13 @@ CACHE_KEY_CLASS_MEMBERS = f"{CACHE_PREFIX_CLASS}:members:{{class_id}}:{{role}}:{
 
 # 错题本相关
 CACHE_KEY_MISTAKE_LIST = f"{CACHE_PREFIX_MISTAKE}:list:{{user_id}}:{{filter}}:{{page}}:{{size}}"
+
+
+def get_cache_timeout(base_timeout):
+    """获取带随机抖动的缓存超时时间"""
+    jitter = random.randint(0, int(base_timeout * 0.1))  # 10% 的随机抖动
+    return base_timeout + jitter
+
 
 # ============================================
 # 缓存 Key 生成函数

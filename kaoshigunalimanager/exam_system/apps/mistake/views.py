@@ -11,7 +11,8 @@ from utils.CacheConfig import (
     CACHE_KEY_MISTAKE_LIST,
     CACHE_TIMEOUT_MISTAKE_LIST,
     generate_cache_key,
-    generate_filter_key
+    generate_filter_key,
+    get_cache_timeout,
 )
 from utils.CacheTools import cache_delete_pattern
 
@@ -311,7 +312,7 @@ class MistakeListWithStatisticsView(APIView):
         response_data["list"] = question_list
         response_data["statistics"] = statistics
         # 设置缓存
-        cache.set(cache_key, response_data, CACHE_TIMEOUT_MISTAKE_LIST)
+        cache.set(cache_key, response_data, get_cache_timeout(CACHE_TIMEOUT_MISTAKE_LIST))
         return MyResponse.success(data=response_data)
 
 

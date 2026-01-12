@@ -10,7 +10,7 @@ from utils.CacheConfig import (
     CACHE_TIMEOUT_CLASS_TREND,
     CACHE_TIMEOUT_STUDENT_CLASS,
     CACHE_KEY_STUDENT_CLASS,
-    generate_cache_key
+    generate_cache_key, get_cache_timeout,
 )
 from utils.CacheTools import cache_delete_pattern
 from django.core.cache import cache
@@ -74,7 +74,7 @@ class ScoreTrendView(APIView):
         }
 
         # 设置缓存
-        cache.set(cache_key, response_data, CACHE_TIMEOUT_CLASS_TREND)
+        cache.set(cache_key, response_data, get_cache_timeout(CACHE_TIMEOUT_CLASS_TREND))
         return MyResponse.success(data=response_data)
 
 
@@ -138,7 +138,7 @@ class StudentClassView(APIView):
         }
 
         # 设置缓存
-        cache.set(cache_key, response_data, CACHE_TIMEOUT_STUDENT_CLASS)
+        cache.set(cache_key, response_data, get_cache_timeout(CACHE_TIMEOUT_STUDENT_CLASS))
         return MyResponse.success(data=response_data)
 
 
