@@ -1,11 +1,19 @@
 import logging
 from rest_framework.views import APIView
-from django.db.models import Count, Max, Min
+from django.db.models import Count, Max, Min, Q
+from django.core.cache import cache
 from apps.question.models import Question
 from apps.user.models import User
 from apps.exam.models import AnswerRecord, ExamRecord
 from apps.mistake.models import Mistake
 from utils.ResponseMessage import check_auth, MyResponse
+from utils.CacheConfig import (
+    CACHE_KEY_MISTAKE_LIST,
+    CACHE_TIMEOUT_MISTAKE_LIST,
+    generate_cache_key,
+    generate_filter_key
+)
+from utils.CacheTools import cache_delete_pattern
 
 logger = logging.getLogger('apps')
 
@@ -175,6 +183,16 @@ class MistakeListWithStatisticsView(APIView):
             elif v:
                 filter_body[f"question__{k}__icontains"] = v
 
+        # 构建缓存键
+        cache_filters = generate_filter_key(filter_body)
+        cache_key = generate_cache_key(
+            CACHE_KEY_MISTAKE_LIST, user_id=user_id, filter=cache_filters, page=page, size=page_size
+        )
+        # 获取缓存数据
+        cache_data = cache.get(cache_key)
+        if cache_data:
+            return MyResponse.success(data=cache_data)
+
         # 构建响应数据
         response_data = {
             "list": [],
@@ -292,6 +310,8 @@ class MistakeListWithStatisticsView(APIView):
         # 错题题目id
         response_data["list"] = question_list
         response_data["statistics"] = statistics
+        # 设置缓存
+        cache.set(cache_key, response_data, CACHE_TIMEOUT_MISTAKE_LIST)
         return MyResponse.success(data=response_data)
 
 
@@ -312,6 +332,9 @@ class MistakeMasteredView(APIView):
         mistake.save()
 
         logger.info(f"学生 {payload.get('username')} 标记错题为已掌握，错题ID: {mistake_id}")
+        # 清除错题列表缓存
+        cache_delete_pattern("mistake:list:*")
+
         return MyResponse.success(message="标记成功")
 
 
