@@ -135,8 +135,9 @@ CACHES = {
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
             # 可设置连接池大小，优化性能
-            "CONNECTION_POOL_KWARGS": {"max_connections": 100},
-        }
+            "CONNECTION_POOL_KWARGS": {"max_connections": 500},
+        },
+        "KEY_FUNCTION": "utils.CacheConfig.custom_cache_key",
     }
 }
 
