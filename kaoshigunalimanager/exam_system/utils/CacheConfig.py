@@ -1,4 +1,6 @@
 import random
+from urllib.parse import quote
+
 
 """
 缓存配置文件
@@ -42,6 +44,10 @@ CACHE_TIMEOUT_SYSTEM_STATISTICS = 300 + random.randint(0, 20)     # 系统统计
 
 # 学生相关
 CACHE_TIMEOUT_STUDENT_CLASS = 600 + random.randint(0, 20)         # 学生班级信息：10分钟
+
+# 处理空结构超时时间
+CACHE_TIMEOUT_EMPTY_RESULT = 60 + random.randint(0, 20)
+
 
 # ============================================
 # 缓存 Key 前缀配置
@@ -135,7 +141,8 @@ def generate_filter_key(filter_dict: dict) -> str:
 
     # 排序以确保相同的过滤条件生成相同的 key
     sorted_items = sorted(filter_dict.items())
-    return "&".join([f"{k}={v}" for k, v in sorted_items])
+    # 对过滤条件的值进行 URL 编码
+    return "&".join([f"{k}={quote(str(v), safe='')}" for k, v in sorted_items])
 
 
 # ============================================
@@ -155,6 +162,8 @@ def custom_cache_key(key, key_prefix, version):
     """
     自定义缓存键生成函数
     """
-    key_prefix = key.split(":")[0]
-    version = CACHE_VERSION.get(key_prefix, "1")
-    return f":{version}:{key}"
+    if ":" in key:
+        module_prefix = key.split(":")[0]
+        cache_version = CACHE_VERSION.get(module_prefix, "1")
+        return f":{cache_version}:{key}"
+    return key
