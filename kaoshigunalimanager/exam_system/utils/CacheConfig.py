@@ -51,6 +51,9 @@ CACHE_TIMEOUT_TEACHER_CLASS = 300           # 教师班级列表：5分钟
 # 处理空结构超时时间
 CACHE_TIMEOUT_EMPTY_RESULT = 60  
 
+# 用户账户锁定时间
+CACHE_TIMEOUT_USER_LOGIN_LOCK = 60 * 30     # 用户账户锁定时间: 30分钟
+CACHE_TIMEOUT_USER_LOGIN_FAIL_COUNT = 60 * 15     # 用户账户登陆失败次数时间: 15分钟
 
 # ============================================
 # 缓存 Key 前缀配置
@@ -96,6 +99,8 @@ CACHE_KEY_STUDENT_CLASS = f"{CACHE_PREFIX_USER}:class:{{user_id}}"
 CACHE_KEY_USER_INFO = f"{CACHE_PREFIX_USER}:info:{{user_id}}"
 CACHE_KEY_USER_LIST = f"{CACHE_PREFIX_USER}:list:{{filter}}:{{class_id}}:{{page}}:{{size}}"
 CACHE_KEY_USER_STATISTICS = f"{CACHE_PREFIX_STATISTICS}:user"
+CACHE_KEY_USER_LOGIN_LOCK = f"{CACHE_PREFIX_USER}:login_lock:{{username}}"
+CACHE_KEY_USER_LOGIN_FAIL_COUNT = f"{CACHE_PREFIX_USER}:login_fail_count:{{username}}"
 
 # 班级相关
 CACHE_KEY_CLASS_LIST = f"{CACHE_PREFIX_CLASS}:list:{{filter}}:{{page}}:{{size}}"

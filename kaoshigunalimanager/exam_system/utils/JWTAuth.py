@@ -1,7 +1,7 @@
 import jwt
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
-
+from apps.user.models import User
 from exam_system.settings import SECRET_KEY
 from django.utils import timezone
 
@@ -57,13 +57,24 @@ class JWTHeaderQueryParamAuthentication(BaseAuthentication):
             # 验证token
             result = get_payload(token)
 
-            # 原代码：返回整个result字典（包含status、payload、error）
-            # return (result, token)
-
-            # 新代码：只返回payload作为user对象，符合DRF标准
+            # 只返回payload作为user对象，符合DRF标准
             if not result.get("status"):
                 raise AuthenticationFailed(result.get("error", "Token验证失败"))
-            return (result.get("payload"), token)
+
+            payload = result.get("payload")
+
+            user_id = payload.get("id")
+            if user_id:
+                try:
+                    user = User.objects.get(id=user_id)
+                    # 检查用户状态
+                    if user.status != 1:
+                        raise AuthenticationFailed("该账户已被禁用，请联系管理员")
+
+                except User.DoesNotExist:
+                    raise AuthenticationFailed("用户不存在")
+
+            return (payload, token)
 
         except AuthenticationFailed as e:
             raise e

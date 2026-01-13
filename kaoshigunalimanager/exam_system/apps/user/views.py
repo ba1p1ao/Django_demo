@@ -10,7 +10,13 @@ from utils.CacheConfig import generate_cache_key, CACHE_KEY_USER_INFO
 from utils.ResponseMessage import MyResponse
 from utils.PasswordEncode import verify_password, hash_password
 from utils.JWTAuth import create_token
-from utils.CacheConfig import CACHE_KEY_SYSTEM_STATISTICS
+from utils.CacheConfig import (
+    CACHE_KEY_SYSTEM_STATISTICS,
+    CACHE_KEY_USER_LOGIN_LOCK,
+    CACHE_TIMEOUT_USER_LOGIN_LOCK,
+    CACHE_KEY_USER_LOGIN_FAIL_COUNT,
+    CACHE_TIMEOUT_USER_LOGIN_FAIL_COUNT,
+    get_cache_timeout, generate_filter_key, generate_cache_key)
 
 logger = logging.getLogger('apps')
 
@@ -24,25 +30,45 @@ class UserLoginView(APIView):
         if not username or not password:
             return MyResponse.failed("用户名和密码不能为空")
 
+        # 检测账户是否被锁定, 如果大于等于5次，视为锁定
+        lock_key = generate_cache_key(CACHE_KEY_USER_LOGIN_LOCK, username=username)
+        is_locked = cache.get(lock_key)
+        if is_locked:
+            return MyResponse.failed(f"账户已锁定，请 30 分钟后再试")
+
         try:
-            user = User.objects.get(username=username)
+            user = User.objects.get(username=username, status=1)
         except User.DoesNotExist:
             logger.warning(f"登录失败: 用户名 {username} 不存在")
             return MyResponse.failed("用户名或密码错误")
 
         if not verify_password(password, user.password):
             logger.warning(f"登录失败: 用户 {username} 密码错误")
-            return MyResponse.failed("用户名或密码错误")
+
+            # 登录失败之后添加失败次数
+            fail_key = generate_cache_key(CACHE_KEY_USER_LOGIN_FAIL_COUNT, username=username)
+            fail_count = cache.get(fail_key, 0)
+            fail_count += 1
+            cache.set(fail_key, fail_count, get_cache_timeout(CACHE_TIMEOUT_USER_LOGIN_FAIL_COUNT))
+
+            if fail_count >= 5:
+                cache.set(lock_key, True, get_cache_timeout(CACHE_TIMEOUT_USER_LOGIN_LOCK))
+                logger.warning(f"账户 {username} 已锁定，连续失败 5 次")
+                return MyResponse.failed("密码错误次数过多，账户已锁定 30 分钟")
+
+            remaining = 5 - fail_count
+            return MyResponse.failed(f"用户名或密码错误，剩余尝试次数: {remaining}")
 
         user_info = UserSerializers(instance=user).data
         token = create_token(payload=user_info, timeout=JWT_EXPIRE_TIME)
 
         logger.info(f"用户 {username} 登录成功")
+        # 如果登录成功，删除锁定缓存
+        cache.delete(lock_key)
         return MyResponse.success(message="登录成功", data={
             'token': token,
             'user_info': user_info
         })
-
 
 
 class UserInfoView(APIView):
@@ -62,7 +88,6 @@ class UserInfoView(APIView):
 
         userinfo = UserSerializers(instance=user).data
         return MyResponse.success(data=userinfo)
-
 
 
 class UserRegisterView(APIView):
@@ -99,7 +124,6 @@ class UserRegisterView(APIView):
         return MyResponse.failed(message="注册失败", data=user_serializer.errors)
 
 
-
 class UserUpdateView(APIView):
     def put(self, request):
 
@@ -126,7 +150,6 @@ class UserUpdateView(APIView):
 
         logger.error(f"用户 {user.username} 信息更新失败: {user_ser.errors}")
         return MyResponse.failed(message="更新失败", data=user_ser.errors)
-
 
 
 class UserPasswordView(APIView):
@@ -164,4 +187,3 @@ class UserPasswordView(APIView):
 
         logger.info(f"用户 {user.username} 密码修改成功")
         return MyResponse.success(message="密码修改成功")
-

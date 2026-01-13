@@ -54,6 +54,9 @@ def check_permission(view_func):
         if not payload:
             return MyResponse.other(code=403, message="用户信息已过期，请重新登录")
 
+        if payload.get("status") != 1:
+            return MyResponse.other(code=403, message="该账户已被禁用，请联系管理员")
+
         if payload.get("role") not in ["teacher", "admin"]:
             return MyResponse.other(code=403, message="只有教师和管理员可以访问题库")
 
@@ -70,6 +73,9 @@ def check_auth(view_func):
         payload = request.user
         if not payload:
             return MyResponse.other(code=403, message="用户信息已过期，请重新登录")
+
+        if payload.get("status") != 1:
+            return MyResponse.other(code=403, message="该账户已被禁用，请联系管理员")
 
         return view_func(self, request, *args, **kwargs)
     return wapper
