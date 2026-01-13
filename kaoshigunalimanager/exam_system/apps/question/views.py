@@ -384,11 +384,12 @@ class QuestionExportView(APIView):
             frame['题目分类'].append(question["category"])
             frame['题目内容'].append(question["content"])
 
-            if question.get("options") and question["type"] != 'judge':
-                frame['选项A'].append(question.get("options").get("A"))
-                frame['选项B'].append(question.get("options").get("B"))
-                frame['选项C'].append(question.get("options").get("C"))
-                frame['选项D'].append(question.get("options").get("D"))
+            options = question.get("options")
+            if options and question["type"] != 'judge':
+                frame['选项A'].append(options.get("A"))
+                frame['选项B'].append(options.get("B"))
+                frame['选项C'].append(options.get("C"))
+                frame['选项D'].append(options.get("D"))
             else:
                 frame['选项A'].append(None)
                 frame['选项B'].append(None)

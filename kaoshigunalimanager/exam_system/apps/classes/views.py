@@ -129,6 +129,9 @@ class ClassCreateView(APIView):
         except User.DoesNotExist:
             return MyResponse.failed(message="教师信息不存在")
 
+        if user_teacher.role != "teacher":
+            return MyResponse.failed(message="请选择教师角色作为班主任")
+
         class_obj = Class.objects.filter(name=request_data["name"])
         if class_obj:
             return MyResponse.failed(message="班级名称已存在")
@@ -552,8 +555,8 @@ class ClassExamRankingView(APIView):
         # print(request_data)
         exam_id = request_data.get("exam_id")
 
-        page = int(request_data.get("page"))
-        page_size = int(request_data.get("size"))
+        page = int(request_data.get("page", 1))
+        page_size = int(request_data.get("size", 10))
         offset = (page - 1) * page_size
 
         # 构建缓存键

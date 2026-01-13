@@ -556,8 +556,13 @@ class ExamStartView(generics.CreateAPIView):
         exam_record = ExamRecord.objects.filter(exam_id=exam_id, user_id=user_id, status="in_progress").first()
         if exam_record:
             current_time = timezone.localtime()
+            exam_start_time = exam.start_time
             exam_end_time = exam.end_time
-            if current_time >= exam_end_time:
+
+            if exam_start_time and current_time < exam_end_time:
+                return MyResponse.failed("该试卷还未开始，无法进行考试")
+
+            if exam_end_time and current_time >= exam_end_time:
                 return MyResponse.failed("该试卷已经结束，无法进行考试")
             else:
                 # 使用 timezone.localtime 将 UTC 时间转换为本地时间

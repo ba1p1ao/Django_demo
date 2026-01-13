@@ -89,9 +89,6 @@ class UserListView(APIView):
             }
             return MyResponse.success(data=response_data)
 
-        total = users.count()
-        page_list = users.order_by("-create_time")[offset:offset+page_size]
-
         ser_data = UserSerializers(instance=page_list, many=True).data
 
         # 为每个用户添加班级信息
@@ -151,7 +148,8 @@ class UserStatisticsView(APIView):
                 response_data["teacher_count"] += 1
             elif user.role == "admin":
                 response_data["admin_count"] += 1
-            elif user.status == 1:
+
+            if user.status == 1:
                 response_data["active_users"] += 1
             elif user.status == 0:
                 response_data["disabled_users"] += 1
