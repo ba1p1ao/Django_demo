@@ -123,7 +123,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onActivated, computed } from 'vue'
+import { ref, reactive, onMounted, onActivated, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Download, Upload } from '@element-plus/icons-vue'
@@ -316,13 +316,32 @@ const handleCurrentChange = (val) => {
 }
 
 onMounted(() => {
-  // 检查是否为教师或管理员
-  if (!['teacher', 'admin'].includes(userInfo.value.role)) {
-    ElMessage.error('您没有权限访问此页面')
-    router.push('/home')
-    return
+  // 等待用户信息加载完成后再检查权限
+  const checkPermission = () => {
+    if (userInfo.value.role && !['teacher', 'admin'].includes(userInfo.value.role)) {
+      ElMessage.error('您没有权限访问此页面')
+      router.push('/home')
+      return false
+    }
+    return true
   }
-  loadData()
+
+  // 如果用户信息已加载，立即检查
+  if (userInfo.value.role) {
+    if (checkPermission()) {
+      loadData()
+    }
+  } else {
+    // 否则等待用户信息加载
+    const unwatch = watch(userInfo, (newVal) => {
+      if (newVal.role) {
+        unwatch()
+        if (checkPermission()) {
+          loadData()
+        }
+      }
+    })
+  }
 })
 
 onActivated(() => {

@@ -271,12 +271,12 @@ const loadClassList = async () => {
 
 const loadTeacherList = async () => {
   try {
-    const res = await getUserList({ role: 'teacher', size: 100 })
-    console.log('教师列表响应:', res)
+    // 使用更大的 size 或实现分页加载
+    const res = await getUserList({ role: 'teacher', size: 1000 })
     teacherList.value = res.data.list || []
-    console.log('教师列表数据:', teacherList.value)
   } catch (error) {
     console.error('加载教师列表失败:', error)
+    ElMessage.error('加载教师列表失败')
   }
 }
 

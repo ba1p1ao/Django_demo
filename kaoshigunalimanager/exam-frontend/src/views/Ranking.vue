@@ -312,13 +312,12 @@ const loadTrendData = async () => {
     const res = await getStudentScoreTrend({ days: trendDays.value })
     if (res.data) {
       trendData.value = res.data
-      // 按时间由近到远排序
+      // 创建新数组进行排序，不修改原数据
       if (trendData.value.trend && trendData.value.trend.length > 0) {
-        trendData.value.trend.sort((a, b) => {
+        trendData.value.trend = [...trendData.value.trend].sort((a, b) => {
           return new Date(b.date) - new Date(a.date)
         })
       }
-      // 刷新图表
       if (trendChartRef.value) {
         trendChartRef.value.refresh()
       }

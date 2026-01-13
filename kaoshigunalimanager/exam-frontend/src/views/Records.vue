@@ -181,7 +181,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { getExamRecordList, getGroupedExamRecords, getExamStatistics } from '@/api/exam'
@@ -355,6 +355,11 @@ const handleViewModeChange = () => {
   pagination.page = 1
   loadData()
 }
+
+// 添加 watch 监听 viewMode 变化
+watch(viewMode, () => {
+  handleViewModeChange()
+})
 
 onMounted(() => {
   loadData()

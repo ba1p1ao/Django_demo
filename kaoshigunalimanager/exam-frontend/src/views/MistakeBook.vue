@@ -278,18 +278,29 @@ const handleExport = async () => {
     const res = await exportMistakeQuestions()
 
     // 检查响应是否是有效的 Excel 文件
-    // 如果响应类型是 application/json，说明后端返回了错误信息
     if (res.type === 'application/json') {
       const reader = new FileReader()
       reader.onload = (e) => {
-        const errorData = JSON.parse(e.target.result)
-        ElMessage.error(errorData.message || '导出失败')
+        try {
+          const errorData = JSON.parse(e.target.result)
+          ElMessage.error(errorData.message || '导出失败')
+        } catch (parseError) {
+          ElMessage.error('导出失败：无法解析错误信息')
+        }
+      }
+      reader.onerror = () => {
+        ElMessage.error('导出失败：读取响应数据出错')
       }
       reader.readAsText(res)
       return
     }
 
-    // 只有当响应是 Excel 文件时才下载
+    // 检查是否为有效的文件类型
+    if (res.size === 0) {
+      ElMessage.error('导出失败：返回的文件为空')
+      return
+    }
+
     if (res.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
         res.type === 'application/octet-stream') {
       const blob = new Blob([res], { type: res.type })
@@ -297,15 +308,17 @@ const handleExport = async () => {
       const link = document.createElement('a')
       link.href = url
       link.download = `错题本_${new Date().getTime()}.xlsx`
+      document.body.appendChild(link)
       link.click()
+      document.body.removeChild(link)
       window.URL.revokeObjectURL(url)
       ElMessage.success('导出成功')
     } else {
-      ElMessage.error('导出失败：响应格式不正确')
+      ElMessage.error(`导出失败：不支持的文件类型 ${res.type}`)
     }
   } catch (error) {
-    console.error(error)
-    ElMessage.error('导出失败')
+    console.error('导出错题本失败:', error)
+    ElMessage.error(error.message || '导出失败，请稍后重试')
   }
 }
 

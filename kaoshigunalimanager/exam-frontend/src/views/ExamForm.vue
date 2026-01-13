@@ -424,12 +424,20 @@ const openQuestionDialog = () => {
 const handleDialogOpen = () => {
     tempSelectedQuestions.value = []
     questionPagination.page = 1
-    loadQuestions()
-    // 清除表格的选中状态
-    nextTick(() => {
-        if (questionTableRef.value) {
-            questionTableRef.value.clearSelection()
-        }
+    loadQuestions().then(() => {
+        // 在题目加载完成后清除选中状态
+        nextTick(() => {
+            if (questionTableRef.value) {
+                questionTableRef.value.clearSelection()
+                // 重新设置已选题目的选中状态
+                selectedQuestions.value.forEach(selectedQ => {
+                    const row = questionList.value.find(q => q.id === selectedQ.id)
+                    if (row) {
+                        questionTableRef.value.toggleRowSelection(row, true)
+                    }
+                })
+            }
+        })
     })
 }
 
@@ -634,89 +642,48 @@ const handleScoreChange = (value) => {
 
 // // 随机选题
 const getRandomQuestionList = (questions, totalScore) => {
-    if (questions.length == 0) return [];
+    if (questions.length === 0) return []
 
     // 1. 按分数分组
-    let questionScore = {};
+    let questionScore = {}
     questions.forEach(item => {
         if (!questionScore[item.score]) {
-            questionScore[item.score] = [];
+            questionScore[item.score] = []
         }
-        questionScore[item.score].push(item);
-    });
+        questionScore[item.score].push(item)
+    })
 
-    // 2. 统计每个分数有多少个问题
-    let scoredict = {};
-    Object.keys(questionScore).forEach(score => {
-        scoredict[score] = questionScore[score].length;
-    });
+    // 2. 使用贪心算法找到最接近的组合
+    const findBestCombination = (targetScore) => {
+        const scores = Object.keys(questionScore).map(Number).sort((a, b) => b - a)
+        const usedQuestions = []
+        let currentScore = 0
 
-    // console.log("分数分布:", scoredict);
-    // console.log("分组详情:", questionScore);
-
-    // 3. 找到组合方案使总分等于 totalScore
-    const findCombination = () => {
-        const scores = Object.keys(scoredict).map(Number).sort((a, b) => a - b);
-
-        // 使用动态规划找组合
-        const dp = new Array(totalScore + 1).fill(null);
-        dp[0] = {}; // 初始状态：总分为0，使用各种分数的数量为0
-
-        for (let i = 0; i < scores.length; i++) {
-            const score = scores[i];
-            const maxCount = scoredict[score]; // 该分数的最大可用数量
-
-            for (let amount = 0; amount <= totalScore; amount++) {
-                if (dp[amount] !== null) {
-                    // 尝试使用1到maxCount个当前分数的问题
-                    for (let k = 1; k <= maxCount; k++) {
-                        const newAmount = amount + score * k;
-                        if (newAmount > totalScore) break;
-
-                        if (dp[newAmount] === null) {
-                            // 复制原组合并添加当前分数的数量
-                            const newCombination = { ...dp[amount] };
-                            newCombination[score] = (newCombination[score] || 0) + k;
-                            dp[newAmount] = newCombination;
-                        }
-                    }
+        for (const score of scores) {
+            while (currentScore < targetScore && questionScore[score].length > 0) {
+                if (currentScore + score <= targetScore) {
+                    const question = questionScore[score].pop()
+                    usedQuestions.push(question)
+                    currentScore += score
+                } else {
+                    break
                 }
             }
         }
 
-        return dp[totalScore];
-    };
-
-    // 4. 找到组合方案
-    const combination = findCombination();
-    if (!combination) {
-        ElMessage.error(`无法用现有题目组成总分 ${totalScore}`)
-        return [];
+        return usedQuestions
     }
 
-    // 5. 根据组合方案随机选择题目
-    const selectedQuestions = [];
-    Object.keys(combination).forEach(scoreStr => {
-        const score = Number(scoreStr);
-        const count = combination[score];
-        const questionsWithThisScore = questionScore[score];
+    const selectedQuestions = findBestCombination(totalScore)
+    const actualTotal = selectedQuestions.reduce((sum, q) => sum + q.score, 0)
 
-        // 如果题目数量足够
-        if (questionsWithThisScore.length >= count) {
-            // 随机打乱题目顺序
-            const shuffled = [...questionsWithThisScore].sort(() => Math.random() - 0.5);
-            // 选取前count个
-            selectedQuestions.push(...shuffled.slice(0, count));
-        } else {
-            console.warn(`分数 ${score} 的题目数量不足，需要 ${count} 个，只有 ${questionsWithThisScore.length} 个`);
-        }
-    });
+    // 3. 如果总分不匹配，提示用户
+    if (actualTotal !== totalScore) {
+        ElMessage.warning(`随机组卷总分(${actualTotal}分)与目标总分(${totalScore}分)不一致，请手动调整`)
+    }
 
-    // 6. 验证总分
-    const actualTotal = selectedQuestions.reduce((sum, q) => sum + q.score, 0);
-
-    return selectedQuestions;
-};
+    return selectedQuestions
+}
 watch(() => form.is_random, async () => {
 
     if (form.is_random == 1) {

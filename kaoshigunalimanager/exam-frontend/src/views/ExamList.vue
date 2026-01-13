@@ -51,15 +51,15 @@ const canTakeExam = (exam) => {
   const now = new Date()
   const startTime = new Date(exam.start_time)
   const endTime = new Date(exam.end_time)
-  
-  // 检查考试时间
+
   const inTimeRange = now >= startTime && now <= endTime
   if (!inTimeRange) {
     return false
   }
-  
-  // 如果不允许重复作答，检查是否已经参加过
-  if (exam.allow_retake === 0) {
+
+  // 添加默认值检查
+  const allowRetake = exam.allow_retake !== undefined ? exam.allow_retake : 0
+  if (allowRetake === 0) {
     const hasTaken = userExamRecords.value.some(
       record => record.exam_id === exam.id
     )
@@ -67,7 +67,7 @@ const canTakeExam = (exam) => {
       return false
     }
   }
-  
+
   return true
 }
 

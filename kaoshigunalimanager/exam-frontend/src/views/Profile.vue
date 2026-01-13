@@ -163,7 +163,41 @@ const handleUpdateInfo = async () => {
 }
 
 const handleUploadAvatar = () => {
-  ElMessage.info('头像上传功能待实现')
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = 'image/*'
+  input.onchange = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    // 验证文件大小（限制为 2MB）
+    if (file.size > 2 * 1024 * 1024) {
+      ElMessage.error('图片大小不能超过 2MB')
+      return
+    }
+
+    // 验证文件类型
+    if (!file.type.startsWith('image/')) {
+      ElMessage.error('请上传图片文件')
+      return
+    }
+
+    // 创建 FormData
+    const formData = new FormData()
+    formData.append('avatar', file)
+
+    try {
+      // 调用上传接口（需要后端支持）
+      const res = await updateUserInfo({ avatar: formData })
+      form.avatar = res.data.avatar
+      await userStore.getUserInfo()
+      ElMessage.success('头像上传成功')
+    } catch (error) {
+      console.error('上传头像失败:', error)
+      ElMessage.error('头像上传失败，请重试')
+    }
+  }
+  input.click()
 }
 
 const handleChangePassword = async () => {

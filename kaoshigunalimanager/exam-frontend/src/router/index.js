@@ -127,7 +127,7 @@ const router = createRouter({
 })
 
 // 路由守卫
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore()
   const token = userStore.token
 
@@ -136,6 +136,16 @@ router.beforeEach((to, from, next) => {
   } else if (to.path === '/login' && token) {
     next('/')
   } else if (to.meta.roles) {
+    // 如果没有用户信息，尝试获取
+    if (!userStore.userInfo || !userStore.userInfo.role) {
+      try {
+        await userStore.getUserInfo()
+      } catch (error) {
+        userStore.logout()
+        next('/login')
+        return
+      }
+    }
     const role = userStore.userInfo?.role
     if (!to.meta.roles.includes(role)) {
       next('/')

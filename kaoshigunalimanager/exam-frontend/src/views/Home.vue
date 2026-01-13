@@ -462,6 +462,7 @@ const loadSystemStatistics = async () => {
     }
   } catch (error) {
     console.error('获取系统统计数据失败:', error)
+    ElMessage.error('加载统计数据失败，请刷新页面重试')
   }
 }
 

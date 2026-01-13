@@ -11,7 +11,9 @@ export const useUserStore = defineStore('user', () => {
     const res = await loginApi(loginForm)
     token.value = res.data.token
     localStorage.setItem('token', res.data.token)
-    await getUserInfo()
+    // 直接使用 user_info，不需要再次调用 getUserInfo
+    userInfo.value = res.data.user_info
+    localStorage.setItem('userInfo', JSON.stringify(res.data.user_info))
     return res
   }
 

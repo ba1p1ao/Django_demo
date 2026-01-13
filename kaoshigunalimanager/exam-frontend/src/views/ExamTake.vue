@@ -276,20 +276,14 @@ const loadQuestions = async (startTime, duration) => {
       }
     })
 
-    // 根据 start_time 计算实际剩余时间
+    // 改进的时间计算
     if (startTime && duration) {
-      // 手动解析时间，避免浏览器时区解析问题
-      const [datePart, timePart] = startTime.split(' ')
-      const [year, month, day] = datePart.split('-').map(Number)
-      const [hour, minute, second] = timePart.split(':').map(Number)
-      const start = new Date(year, month - 1, day, hour, minute, second).getTime()
-
+      const start = new Date(startTime).getTime()
       const now = Date.now()
-      const elapsedSeconds = Math.floor((now - start) / 1000) // 已经过去的秒数
+      const elapsedSeconds = Math.floor((now - start) / 1000)
       const totalSeconds = duration * 60
       remainingTime.value = Math.max(0, totalSeconds - elapsedSeconds)
 
-      // 如果考试已结束，自动提交
       if (remainingTime.value <= 0) {
         handleSubmit(true)
       }
