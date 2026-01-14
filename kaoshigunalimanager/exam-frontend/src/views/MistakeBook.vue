@@ -2,7 +2,7 @@
   <div class="mistake-book-container">
     <el-row :gutter="20">
       <!-- 左侧：错题统计 -->
-      <el-col :span="6">
+      <el-col :span="4">
         <el-card>
           <template #header>
             <div class="card-header">
@@ -54,7 +54,7 @@
       </el-col>
       
       <!-- 右侧：错题列表 -->
-      <el-col :span="18">
+      <el-col :span="20">
         <el-card>
           <template #header>
             <div class="card-header">
@@ -238,7 +238,7 @@ const loadData = async () => {
       recent_mistakes: []
     }
   } catch (error) {
-    console.error(error)
+    // console.error(error)
   } finally {
     loading.value = false
   }
@@ -268,7 +268,7 @@ const handleMarkMastered = async (item) => {
     loadData()
   } catch (error) {
     if (error !== 'cancel') {
-      console.error(error)
+      // console.error(error)
     }
   }
 }
@@ -317,7 +317,7 @@ const handleExport = async () => {
       ElMessage.error(`导出失败：不支持的文件类型 ${res.type}`)
     }
   } catch (error) {
-    console.error('导出错题本失败:', error)
+    // console.error('导出错题本失败:', error)
     ElMessage.error(error.message || '导出失败，请稍后重试')
   }
 }
