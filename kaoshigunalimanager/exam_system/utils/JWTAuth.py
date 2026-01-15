@@ -74,7 +74,23 @@ class JWTHeaderQueryParamAuthentication(BaseAuthentication):
                 except User.DoesNotExist:
                     raise AuthenticationFailed("用户不存在")
 
-            return (payload, token)
+            # 验证 payload 的完整性
+            required_fields = ["id", "username", "role", "status"]
+            for field in required_fields:
+                if field not in payload:
+                    raise AuthenticationFailed(f"Token中缺少必需字段: {field}")
+
+            # 验证字段值的有效性
+            if not isinstance(payload.get("id"), int):
+                raise AuthenticationFailed("用户ID格式错误")
+
+            if payload.get("role") not in ["student", "teacher", "admin"]:
+                raise AuthenticationFailed("用户角色无效")
+
+            if payload.get("status") not in [1, 0]:
+                raise AuthenticationFailed("用户状态无效")
+
+            return payload, token
 
         except AuthenticationFailed as e:
             raise e
