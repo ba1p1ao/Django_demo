@@ -13,20 +13,20 @@ pymysql==1.1.0
 # Redis 缓存支持
 django-redis==5.4.0
 
-# 密码加密（如果使用）
-bcrypt==4.1.2
-
 # JWT 认证支持
 PyJWT==2.8.0
 
-# PDF 生成
+# PDF 报告生成
 reportlab==4.0.8
 
-# Excel 文件处理
+# Excel 文件处理（数据操作）
+pandas>=2.0.0
+
+# Excel 文件读写
 openpyxl==3.1.2
 
 # 数据库连接池
 DBUtils==3.0.3
 
-# 其他常用依赖
-python-dotenv==1.0.0
+# Redis 客户端
+redis>=4.0.0
