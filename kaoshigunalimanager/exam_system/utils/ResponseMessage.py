@@ -51,8 +51,16 @@ def check_permission(view_func):
     @wraps(view_func)
     def wapper(self, request, *args, **kwargs):
         payload = request.user
-        if not payload:
+
+        # 验证 payload 是否存在且为字典
+        if not payload or not isinstance(payload, dict):
             return MyResponse.other(code=403, message="用户信息已过期，请重新登录")
+
+        # 验证字段是否完整
+        required_fields = ["id", "username", "role", "status"]
+        for field in required_fields:
+            if field not in payload:
+                return MyResponse.other(code=403, message="用户信息不完整，请重新登录")
 
         if payload.get("status") != 1:
             return MyResponse.other(code=403, message="该账户已被禁用，请联系管理员")
@@ -71,8 +79,16 @@ def check_auth(view_func):
     @wraps(view_func)
     def wapper(self, request, *args, **kwargs):
         payload = request.user
-        if not payload:
+
+        # 验证 payload 是否存在且为字典
+        if not payload or not isinstance(payload, dict):
             return MyResponse.other(code=403, message="用户信息已过期，请重新登录")
+
+        # 验证字段是否完整
+        required_fields = ["id", "username", "role", "status"]
+        for field in required_fields:
+            if field not in payload:
+                return MyResponse.other(code=403, message="用户信息不完整，请重新登录")
 
         if payload.get("status") != 1:
             return MyResponse.other(code=403, message="该账户已被禁用，请联系管理员")
