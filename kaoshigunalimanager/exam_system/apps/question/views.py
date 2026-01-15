@@ -1,4 +1,6 @@
 import logging
+from unicodedata import category
+
 import pandas as pd
 import io
 from rest_framework.views import APIView
@@ -55,6 +57,112 @@ DIFFICULTY_MAP = {
     "medium": "中等",
     "hard": "困难",
 }
+
+# 添加验证函数
+def validate_import_question(question_data, index):
+    """
+    验证导入的题目数据
+    Args:
+       question_data: 题目数据字典
+        index: 行号
+
+    Returns:
+        (is_valid, error_message): (是否有效, 错误信息)
+    """
+
+    # 验证题目类型
+    valid_types = ["single", "multiple", "judge", "fill"]
+    if not question_data.get("type") or question_data["type"] not in valid_types:
+        return False, f"题目类型无效，必须是：单选题、多选题、判断题、填空题"
+
+    # 验证题目内容
+    content = question_data.get("content")
+    if not content or not isinstance(content, str):
+        return False, "题目内容不能为空"
+    if len(content) > 2000:
+        return False, f"题目内容过长，最多2000个字符（当前{len(content)}个）"
+
+    # 验证正确答案
+    answer = question_data.get("answer")
+    if not answer or not isinstance(answer, str):
+        return False, "正确答案不能为空"
+    if len(answer) > 500:
+        return False, f"正确答案过长，最多500个字符（当前{len(answer)}个）"
+
+    # 验证题目分类
+    category = question_data.get("category")
+    if category and len(str(category)) > 100:
+        return False, f"题目分类过长，最多100个字符"
+
+    # 验证题目解析
+    analysis = question_data.get("analysis")
+    if analysis and len(str(analysis)) > 2000:
+        return False, f"题目解析过长，最多2000个字符"
+
+    # 验证难度
+    valid_difficulties = ["easy", "medium", "hard"]
+    difficulty = question_data.get("difficulty")
+    if difficulty and difficulty not in valid_difficulties:
+        return False, "难度无效，必须是：简单、中等、困难"
+
+    # 验证分值
+    score = question_data.get("score")
+    if score is not None:
+        try:
+            score = float(score)
+            if score <= 0 or score > 100:
+                return False, f"分值必须在1-100之间（当前{score}）"
+            question_data["score"] = score
+        except (ValueError, TypeError):
+            return False, "分值必须是数字"
+    else:
+        question_data["score"] = 10  # 设置默认分值
+
+    # 验证选项（单选和多选题需要选项）
+    question_type = question_data.get("type")
+    options = question_data.get("options")
+
+    if question_type in ["single", "multiple"]:
+        if not options or not isinstance(options, dict):
+            return False, "单选和多选题必须包含选项"
+
+        valid_option_keys = ["A", "B", "C", "D"]
+        for key in valid_option_keys:
+            option_value = options.get(key)
+            if option_value and len(str(option_value)) > 500:
+                return False, f"选项{key}过长，最多500个字符"
+
+    # 验证填空题答案格式
+    if question_type == "fill":
+        # 填空题答案可以用 | 分隔多个答案
+        answers = [a.strip() for a in answer.split("|")]
+        if len(answers) == 0:
+            return False, "填空题答案不能为空"
+        for ans in answers:
+            if len(ans) > 200:
+                return False, f"填空题答案过长，每个答案最多200个字符"
+
+    # 验证多选题答案格式
+    if question_type == "multiple":
+        # 多选题答案应该是多个字母，如 "AB" 或 "ABC"
+        valid_answers = set("ABCD")
+        answer_set = set(answer.upper())
+        if not answer_set.issubset(valid_answers):
+            return False, f"多选题答案格式错误，应该是字母组合（如 AB、ABC、ABCD）"
+
+    # 验证判断题答案格式
+    if question_type == "judge":
+        if answer not in ["A", "B", "正确", "错误", "true", "false"]:
+            return False, "判断题答案必须是：正确/错误"
+
+    # 清理数据：去除首尾空格
+    for key in ["content", "category", "answer", "analysis"]:
+        if question_data.get(key) and isinstance(question_data[key], str):
+            question_data[key] = question_data[key].strip()
+
+    return True, None
+
+
 
 class QuestionListView(APIView):
 
@@ -287,7 +395,11 @@ class QuestionImportView(APIView):
             return MyResponse.failed("只能上传 .xlsx/.xls 文件，且不超过 10MB ")
 
         df = pd.read_excel(question_file)
-        questions = self.process_import_data(df)
+        result = self.process_import_data(df)
+        if result.get("error"):
+            return MyResponse.failed(message=result["error"])
+
+        questions = result["questions"]
 
         current_user = User.objects.get(id=payload.get("id"))
         response_data = {
@@ -304,17 +416,21 @@ class QuestionImportView(APIView):
 
             with transaction.atomic():
                 for question in questions:
-                    question["creator"] = current_user
-                    question_index = question.pop("index")
-
-                    # 验证必填字段
-                    if not all([question.get("type"), question.get("content"), question.get("answer")]):
+                    # 检查是否有验证错误
+                    if question.get("error"):
                         failed_count += 1
                         failed_list.append({
-                            "row": question_index,
-                            "reason": f'{question.get("content", "未知")} 缺少必填字段'
+                            "row": question["index"],
+                            "reason": question["error"],
                         })
                         continue
+
+                    # 移除不需要的字段
+                    question_index = question.pop("index")
+                    question.pop("error", None)
+
+                    # 设置创建者
+                    question["creator"] = current_user
 
                     valid_questions.append(Question(**question))
                     success_count += 1
@@ -340,29 +456,89 @@ class QuestionImportView(APIView):
     def process_import_data(self, df):
         questions = []
         try:
+            # 验证必需的列是否存在
+            required_columns = ["题目类型", "题目内容", "正确答案"]
+            missing_columns = [col for col in required_columns if col not in df.columns]
+            if missing_columns:
+                return {
+                    "error": f"Excel文件缺少必需的列：{', '.join(missing_columns)}",
+                    "questions": []
+                }
+
+                # 限制最大导入数量
+            max_import_count = 1000
+            if len(df) > max_import_count:
+                return {
+                    "error": f"一次最多导入{max_import_count}道题目，当前有{len(df)}道",
+                    "questions": []
+                }
+
             for index, row in df.iterrows():
                 question = {}
-                question["index"] = index
-                question["type"] = QUESTION_TYPE_MAP.get(row["题目类型"])
-                question["category"] = row["题目分类"]
-                question["content"] = row["题目内容"]
+                question["index"] = index + 2  # +2 因为Excel从第2行开始（第1行是表头）
+
+                # 获取题目类型，处理NaN值
+                type_value = row.get("题目类型")
+                if pd.isna(type_value) or not isinstance(type_value, str):
+                    question["type"] = None
+                else:
+                    question["type"] = QUESTION_TYPE_MAP.get(row["题目类型"])
+
+                # 获取题目分类
+                category = row.get("题目分类")
+                question["category"] = category if not pd.isna(category) else ""
+
+                # 获取题目内容
+                content = row.get("题目内容")
+                question["content"] = content if not pd.isna(content) else ""
+
+                # 获取选项
                 question["options"] = None
                 if question["type"] == "fill":
                     question["options"] = None
                 elif question["type"] == "judge":
                     question["options"] = {"A": "正确", "B": "错误"}
                 else:
-                    question["options"] = {"A": row["选项A"], "B": row["选项B"], "C": row["选项C"], "D": row["选项D"]}
-                question["answer"] = row["正确答案"]
-                question["analysis"] = row["题目解析"]
-                question["difficulty"] = DIFFICULTY_MAP.get(row["难度"])
-                question["score"] = row["分值"]
+                    options = {}
+                    for key in ["A", "B", "C", "D"]:
+                        option_key = f"选项{key}"
+                        option_value = row.get(option_key)
+                        options[key] = option_value if not pd.isna(option_value) else ""
+                    question["options"] = options
+
+                # 获取正确答案
+                answer = row.get("正确答案")
+                question["answer"] = answer if not pd.isna(answer) else ""
+
+                # 获取题目解析
+                analysis = row.get("题目解析")
+                question["analysis"] = analysis if not pd.isna(analysis) else ""
+
+                # 获取难度
+                difficulty_value = row.get("难度")
+                if pd.isna(difficulty_value) or not isinstance(difficulty_value, str):
+                    question["difficulty"] = None
+                else:
+                    question["difficulty"] = DIFFICULTY_MAP.get(difficulty_value.strip())
+
+                # 获取分值
+                score = row.get("分值")
+                question["score"] = score if not pd.isna(score) else 10
+
+                # 验证题目数据
+                is_valid, error_message = validate_import_question(question, question["index"])
+                if not is_valid:
+                    question["error"] = error_message
 
                 questions.append(question)
 
-            return questions
+            return {"error": None, "questions": questions}
+
         except Exception as e:
-            return MyResponse.failed(message="格式存在错误，请下载导入模板，按模板的格式填写")
+            return {
+                "error": "格式存在错误，请下载导入模板，按模板的格式填写",
+                "questions": []
+            }
 
 
 class QuestionExportView(APIView):
