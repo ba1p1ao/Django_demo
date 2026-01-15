@@ -136,6 +136,7 @@ class ExamRecord(models.Model):
         default='not_started',
         verbose_name='状态'
     )
+    is_timeout = models.BooleanField(default=False, verbose_name='是否超时')
     start_time = models.DateTimeField(null=True, blank=True, verbose_name='开始答题时间')
     create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
     update_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')

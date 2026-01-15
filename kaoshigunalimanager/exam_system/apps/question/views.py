@@ -279,7 +279,7 @@ class QuestionInfoView(RetrieveAPIView, UpdateAPIView, DestroyAPIView):
                 return MyResponse.success("更新成功")
         except Exception as e:
             logger.error(f"题目 ID {question.id} 更新失败: {e}")
-            return MyResponse.failed(message=e)
+            return MyResponse.failed(message=f"题目 ID {question.id} 更新失败")
 
     def destroy(self, request, *args, **kwargs):
         payload = self.get_payload()

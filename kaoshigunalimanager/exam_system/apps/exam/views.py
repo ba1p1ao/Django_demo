@@ -2,6 +2,7 @@ import logging
 from statistics import mean
 import os
 
+from django.utils.duration import duration_string
 from rest_framework.views import APIView
 from rest_framework import viewsets, generics
 from django.db import transaction
@@ -728,6 +729,19 @@ class ExamSubmitView(APIView):
         except ExamRecord.DoesNotExist:
             return MyResponse.failed(message="考试记录不存在或已完成")
 
+        # 验证考试是否超时
+        now = timezone.now()
+        start_time = exam_record.start_time
+        duration_minutes = exam_record.exam.duration
+
+        if start_time:
+            elapsed_seconds = int((now - start_time).total_seconds())
+            total_seconds = duration_minutes * 60
+            if elapsed_seconds > total_seconds:
+                # 考试以超时
+                exam_record.is_timeout = True
+                logger.warning(f"学生 {payload.get('username')} 提交试卷时已超时，超时: {elapsed_seconds - total_seconds}秒")
+
         try:
             with transaction.atomic():
                 # 获取试卷的所有题目
@@ -881,6 +895,47 @@ class ExamSubmitView(APIView):
             return correct_answer == user_answer
 
         return False
+
+
+class ExamTimeCheckView(APIView):
+    """检查考试剩余时间"""
+    @check_auth
+    def get(self, request):
+        payload = request.user
+        exam_record_id = request.GET.get("exam_record_id")
+
+        if not exam_record_id:
+            return MyResponse.failed(message="缺少考试记录ID")
+
+        try:
+            exam_record = ExamRecord.objects.get(
+                id=exam_record_id,
+                user_id=payload.get("id"),
+                status="in_progress",
+            )
+        except ExamRecord.DoesNotExist:
+            return MyResponse.failed(message="考试记录不存在或已结束")
+
+        # 计算剩余时间（使用服务器时间）
+        now = timezone.now()
+        start_time = exam_record.start_time
+        duration_minutes = exam_record.exam.duration
+
+        if not start_time:
+            return MyResponse.failed(message="考试开始时间无效")
+
+        # 计算已用时间
+        elapsed_seconds = int((now - start_time).total_seconds())
+        total_seconds = duration_minutes * 60
+        remaining_seconds = max(0, total_seconds - elapsed_seconds)
+
+        response_data = {
+            "remaining_time": remaining_seconds,
+            "is_expired": remaining_seconds <= 0,
+            "server_time": now.strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+        return MyResponse.success(data=response_data)
 
 class ExamRecordListView(APIView):
     @check_auth

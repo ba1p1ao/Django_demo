@@ -20,6 +20,7 @@ urlpatterns = [
     path("<int:exam_id>/questions/", views.ExamQuestionsView.as_view()),
     path("answer/", views.ExamAnswerView.as_view()),
     path("submit/", views.ExamSubmitView.as_view()),
+    path("time/check/", views.ExamTimeCheckView.as_view()),
 
     # 考试记录
     path("record/list/", views.ExamRecordListView.as_view()),
