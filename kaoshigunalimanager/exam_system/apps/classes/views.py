@@ -23,7 +23,7 @@ from utils.CacheConfig import (
     CACHE_KEY_STUDENT_CLASS,
     generate_cache_key,
     generate_filter_key,
-    get_cache_timeout,
+    get_cache_timeout, CACHE_KEY_USER_STATISTICS, CACHE_KEY_SYSTEM_STATISTICS,
 
 )
 from utils.CacheTools import cache_delete_pattern
@@ -167,10 +167,20 @@ class ClassView(APIView):
             return MyResponse.failed(message="班级信息不存在")
 
         logger.info(f"用户 {payload.get('username')} 更新班级成功，班级ID: {class_id}")
-        # 清除班级列表缓存
+        # 清除班级相关缓存
         cache_delete_pattern("class:list:*")
-        # 清除班级统计缓存
         cache_delete_pattern("class:statistics:*")
+        cache_delete_pattern("class:members:*")
+        cache_delete_pattern("class:ranking:*")
+        cache_delete_pattern("class:trend:*")
+        # 清除教师班级缓存
+        cache_delete_pattern("teacher:class:*")
+        # 清除学生班级信息缓存
+        cache_delete_pattern("user:class:*")
+        # 清除统计缓存
+        cache.delete(CACHE_KEY_USER_STATISTICS)
+        cache.delete(CACHE_KEY_SYSTEM_STATISTICS)
+
         return MyResponse.success(message="修改成功")
 
     @check_permission
@@ -183,14 +193,19 @@ class ClassView(APIView):
             class_obj.delete()
 
             logger.info(f"用户 {payload.get('username')} 删除班级成功: {class_obj.name}")
-            # 清除班级列表缓存
+            # 清除班级相关缓存
             cache_delete_pattern("class:list:*")
-            # 清除班级统计缓存
             cache_delete_pattern("class:statistics:*")
             cache_delete_pattern("class:members:*")
             cache_delete_pattern("class:ranking:*")
             cache_delete_pattern("class:trend:*")
-
+            # 清除教师班级缓存
+            cache_delete_pattern("teacher:class:*")
+            # 清除学生班级信息缓存
+            cache_delete_pattern("user:class:*")
+            # 清除统计缓存
+            cache.delete(CACHE_KEY_USER_STATISTICS)
+            cache.delete(CACHE_KEY_SYSTEM_STATISTICS)
             return MyResponse.success(message="删除成功")
         except Class.DoesNotExist:
             return MyResponse.failed(message="班级信息不存在")
@@ -212,10 +227,19 @@ class ClassStatusView(APIView):
             if update_class == 0:
                 return MyResponse.failed(message="班级信息不存在")
 
-            # 清除班级列表缓存
+            # 清除班级相关缓存
             cache_delete_pattern("class:list:*")
-            # 清除班级统计缓存
             cache_delete_pattern("class:statistics:*")
+            cache_delete_pattern("class:members:*")
+            cache_delete_pattern("class:ranking:*")
+            cache_delete_pattern("class:trend:*")
+            # 清除教师班级缓存
+            cache_delete_pattern("teacher:class:*")
+            # 清除学生班级信息缓存
+            cache_delete_pattern("user:class:*")
+            # 清除统计缓存
+            cache.delete(CACHE_KEY_USER_STATISTICS)
+            cache.delete(CACHE_KEY_SYSTEM_STATISTICS)
             return MyResponse.success(message="修改成功")
         except Class.DoesNotExist:
             return MyResponse.failed(message="班级信息不存在")
@@ -435,12 +459,19 @@ class ClassMembersAddView(APIView):
         }
 
         logger.info(f"用户 {payload.get('username')} 添加班级成员成功，班级: {class_obj.name}，成功: {len(created_objects)}，失败: {len(failed_ids)}")
-        # 清除班级列表缓存
+        # 清除班级相关缓存
         cache_delete_pattern("class:list:*")
-        # 清除班级统计缓存
         cache_delete_pattern("class:statistics:*")
-        # 清除班级成员列表缓存
         cache_delete_pattern("class:members:*")
+        cache_delete_pattern("class:ranking:*")
+        cache_delete_pattern("class:trend:*")
+        # 清除教师班级缓存
+        cache_delete_pattern("teacher:class:*")
+        # 清除学生班级信息缓存
+        cache_delete_pattern("user:class:*")
+        # 清除统计缓存
+        cache.delete(CACHE_KEY_USER_STATISTICS)
+        cache.delete(CACHE_KEY_SYSTEM_STATISTICS)
 
         return MyResponse.success(data=response_data)
 
@@ -511,6 +542,14 @@ class ClassMembersRemoveView(APIView):
         cache_delete_pattern("class:ranking:*")
         # 清除班级成绩趋势缓存
         cache_delete_pattern("class:trend:*")
+        # 清除班级相关缓存
+        # 清除教师班级缓存
+        cache_delete_pattern("teacher:class:*")
+        # 清除学生班级信息缓存
+        cache_delete_pattern("user:class:*")
+        # 清除统计缓存
+        cache.delete(CACHE_KEY_USER_STATISTICS)
+        cache.delete(CACHE_KEY_SYSTEM_STATISTICS)
         # 清除学生班级信息缓存
         for user_id in existing_user_ids:
             cache.delete(generate_cache_key(CACHE_KEY_STUDENT_CLASS, user_id=user_id))
