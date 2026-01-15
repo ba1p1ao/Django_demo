@@ -1,6 +1,7 @@
 import logging
 from django.db.models import Count, F, Q, Avg, Max, Min, Case, When, FloatField
 from django.utils import timezone
+from django.db import transaction
 from datetime import timedelta
 from rest_framework.views import APIView
 from apps.classes.serializers import ClassListSerializer
@@ -137,13 +138,15 @@ class ClassCreateView(APIView):
             return MyResponse.failed(message="班级名称已存在")
 
         try:
-            # 添加班级信息
-            create_class = Class.objects.create(**request_data)
+            with transaction.atomic():
+                # 添加班级信息
+                create_class = Class.objects.create(**request_data)
 
-            # 将教师信息，添加到该班级里面
-            create_user_class = UserClass.objects.create(user=user_teacher, class_info=create_class)
-            # 修改用户表中的class_id
-            User.objects.filter(id=user_teacher.id).update(class_id=create_class.id)
+                # 将教师信息，添加到该班级里面
+                create_user_class = UserClass.objects.create(user=user_teacher, class_info=create_class)
+                # 修改用户表中的class_id
+                User.objects.filter(id=user_teacher.id).update(class_id=create_class.id)
+
             logger.info(f"用户 {payload.get('username')} 创建班级成功: {create_class.name}")
             # 清除班级列表缓存
             cache_delete_pattern("class:list:*")
@@ -440,15 +443,16 @@ class ClassMembersAddView(APIView):
                 "failed_list": [{"user_id": uid, "reason": "用户已在班级中"} for uid in user_ids]
             })
 
-        user_class_objects = [
-            UserClass(user=user, class_info=class_obj)
-            for user in users_to_add
-        ]
+        with transaction.atomic():
+            user_class_objects = [
+                UserClass(user=user, class_info=class_obj)
+                for user in users_to_add
+            ]
 
-        created_objects = UserClass.objects.bulk_create(user_class_objects)
+            created_objects = UserClass.objects.bulk_create(user_class_objects)
 
-        # 修改用户表的班级id
-        User.objects.filter(id__in=[user.id for user in users_to_add]).update(class_id=class_id)
+            # 修改用户表的班级id
+            User.objects.filter(id__in=[user.id for user in users_to_add]).update(class_id=class_id)
 
         failed_ids = set(user_ids) - {uc.user_id for uc in created_objects}
 
@@ -516,11 +520,12 @@ class ClassMembersRemoveView(APIView):
                 "failed_list": [{"user_id": uid, "reason": "用户不在班级中"} for uid in user_ids]
             })
 
-        # 批量删除
-        deleted_count, _ = user_classes.delete()
+        with transaction.atomic():
+            # 批量删除
+            deleted_count, _ = user_classes.delete()
 
-        # 修改用户表的班级id为null
-        User.objects.filter(id__in=existing_user_ids).update(class_id=None)
+            # 修改用户表的班级id为null
+            User.objects.filter(id__in=existing_user_ids).update(class_id=None)
 
         # 找出删除失败的用户（不在班级中的用户）
         failed_ids = set(user_ids) - existing_user_ids
