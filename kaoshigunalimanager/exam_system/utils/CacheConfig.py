@@ -158,8 +158,14 @@ def generate_filter_key(filter_dict: dict) -> str:
     if not filter_dict:
         return "none"
 
+    # 过滤掉值为 None 的键值对
+    filtered_dict = {k: v for k, v in filter_dict.items() if v is not None}
+    if not filtered_dict:
+        return "none"
+
     # 排序以确保相同的过滤条件生成相同的 key
-    sorted_items = sorted(filter_dict.items())
+    sorted_items = sorted(filtered_dict.items())
+
     # 对过滤条件的值进行 URL 编码
     return "&".join([f"{k}={quote(str(v), safe='')}" for k, v in sorted_items])
 
