@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/4.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
+import os.path
 import sys
 from pathlib import Path
 
@@ -261,3 +262,29 @@ LOGGING = {
 # else:
 #     LOGGING['loggers']['django']['level'] = 'INFO'
 #     LOGGING['loggers']['apps']['level'] = 'INFO'
+
+
+# ============================================
+# 文件上传限制配置
+# ============================================
+
+# 最大上传文件大小（字节）
+DATA_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024  # 50MB
+
+# 最大请求体大小（字节）
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 5000  # 最大字段数量
+
+# 单个文件最大大小（字节）
+FILE_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024  # 50MB
+
+# 文件上传处理器
+FILE_UPLOAD_HANDLERS = [
+    'django.core.files.uploadhandler.MemoryFileUploadHandler',
+    'django.core.files.uploadhandler.TemporaryFileUploadHandler',
+]
+
+# 设置文件临时上传目录
+FILE_UPLOAD_TEMP_DIR = os.path.join(BASE_DIR, "temp_uploads")
+# 自动创建临时目录
+if not os.path.exists(FILE_UPLOAD_TEMP_DIR):
+    os.makedirs(FILE_UPLOAD_TEMP_DIR, exist_ok=True)

@@ -382,6 +382,9 @@ class QuestionImportView(APIView):
     # 添加文件解析器
     parser_classes = [MultiPartParser, FormParser]
 
+    # 文件上传大小限制（字节）
+    MAX_FILE_SIZE = 50 * 1024 * 1024 # 50MB
+
     @check_permission
     def post(self, request):
         payload = request.user
@@ -390,9 +393,13 @@ class QuestionImportView(APIView):
         if not question_file:
             return MyResponse.failed("只能上传 .xlsx/.xls 文件，且不超过 10MB ")
 
+        if question_file.size > self.MAX_FILE_SIZE:
+            return MyResponse.failed(f"文件大小超过限制，最大允许 {self.MAX_FILE_SIZE // (1024 * 1024)}MB")
+
+
         file_name = question_file.name.lower()
-        if not ((file_name.endswith(".xlsx") or  file_name.endswith(".xls")) and question_file.size <= 10 * 1024 * 1024):
-            return MyResponse.failed("只能上传 .xlsx/.xls 文件，且不超过 10MB ")
+        if not (file_name.endswith(".xlsx") or file_name.endswith(".xls")):
+            return MyResponse.failed("只能上传 .xlsx/.xls 文件")
 
         df = pd.read_excel(question_file)
         result = self.process_import_data(df)
