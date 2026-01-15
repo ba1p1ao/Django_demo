@@ -80,7 +80,7 @@ class ClassListView(APIView):
         if cache_data:
             return MyResponse.success(data=cache_data)
 
-        classes = Class.objects.filter(**filter_body).annotate(
+        classes = Class.objects.filter(**filter_body).select_related('head_teacher').annotate(
             student_count=Count("userclass__user")
         )
         if not classes:
@@ -592,7 +592,8 @@ class ClassExamRankingView(APIView):
             userclass__class_info_id=class_id,
             role="student",
             status=1
-        )
+        ).select_related('userclass')
+
         cur_class_student_ids = [s.id for s in cur_class_students]
 
         # 获取班级学生的这次考试记录信息
@@ -693,13 +694,7 @@ class ClassScoreTrendView(APIView):
             "pass_rate": 0,
             "trend": [],
         }
-        # 获取班级学生id
-        cur_class_students = User.objects.filter(
-            userclass__class_info_id=class_id,
-            role="student",
-            status=1
-        )
-        cur_class_student_ids = [s.id for s in cur_class_students]
+
 
         cur_class_exam = Exam.objects.filter(
             status='published',
