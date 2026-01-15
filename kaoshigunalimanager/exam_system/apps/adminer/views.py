@@ -51,6 +51,7 @@ class UserListView(APIView):
                 continue
             elif k == "class_id" and v:
                 class_id = int(v)
+                filter_body["class_id"] = v
             elif k in ["role", "status"] and v:
                 filter_body[f"{k}"] = v
             elif k in ["username", "nickname"] and v:
