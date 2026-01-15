@@ -18,7 +18,7 @@ from utils.CacheConfig import (
     CACHE_TIMEOUT_QUESTION_DETAIL,
     generate_cache_key,
     generate_filter_key, CACHE_KEY_SYSTEM_STATISTICS, CACHE_TIMEOUT_EMPTY_RESULT,
-    get_cache_timeout,
+    get_cache_timeout, CACHE_KEY_USER_STATISTICS,
 )
 from utils.CacheTools import cache_delete_pattern
 from django.core.cache import cache
@@ -153,10 +153,19 @@ class QuestionInfoView(RetrieveAPIView, UpdateAPIView, DestroyAPIView):
                 logger.info(f"题目 ID {question.id} 更新成功")
                 cache.delete(generate_cache_key(CACHE_KEY_QUESTION_DETAIL, id=question.id))
                 cache_delete_pattern("question:list:*")
-                # 清除包含该题目的考试题目缓存
+                # 清除包含这些题目的考试题目缓存
                 cache_delete_pattern("exam:questions:*")
+                # 清除考试相关缓存
+                cache_delete_pattern("exam:list:*")
+                cache_delete_pattern("exam:detail:*")
+                cache_delete_pattern("exam:statistics:*")
+                cache_delete_pattern("exam:ranking:*")
+                # 清除班级相关缓存（因为班级统计、排名、趋势都依赖题目）
                 cache_delete_pattern("class:ranking:*")
                 cache_delete_pattern("class:trend:*")
+                cache_delete_pattern("class:statistics:*")
+                # 清除用户统计缓存
+                cache.delete(CACHE_KEY_USER_STATISTICS)
                 # 清除系统统计缓存
                 cache.delete(CACHE_KEY_SYSTEM_STATISTICS)
                 return MyResponse.success("更新成功")
@@ -174,10 +183,19 @@ class QuestionInfoView(RetrieveAPIView, UpdateAPIView, DestroyAPIView):
         logger.info(f"题目 ID {question_id} 删除成功")
         cache.delete(generate_cache_key(CACHE_KEY_QUESTION_DETAIL, id=question_id))
         cache_delete_pattern("question:list:*")
-        # 清除包含该题目的考试题目缓存
+        # 清除包含这些题目的考试题目缓存
         cache_delete_pattern("exam:questions:*")
+        # 清除考试相关缓存
+        cache_delete_pattern("exam:list:*")
+        cache_delete_pattern("exam:detail:*")
+        cache_delete_pattern("exam:statistics:*")
+        cache_delete_pattern("exam:ranking:*")
+        # 清除班级相关缓存（因为班级统计、排名、趋势都依赖题目）
         cache_delete_pattern("class:ranking:*")
         cache_delete_pattern("class:trend:*")
+        cache_delete_pattern("class:statistics:*")
+        # 清除用户统计缓存
+        cache.delete(CACHE_KEY_USER_STATISTICS)
         # 清除系统统计缓存
         cache.delete(CACHE_KEY_SYSTEM_STATISTICS)
         return MyResponse.success("删除成功")
@@ -202,6 +220,8 @@ class QuestionAddView(CreateAPIView):
                 question_ser.save()
                 logger.info(f"用户 {payload.get('username')} 添加题目成功")
                 cache_delete_pattern("question:list:*")
+                # 清除考试相关缓存（因为新题目可能被添加到试卷）
+                cache_delete_pattern("exam:questions:*")
                 # 清除系统统计缓存
                 cache.delete(CACHE_KEY_SYSTEM_STATISTICS)
                 return MyResponse.success(message='添加成功', data={"id": payload.get("id")})
@@ -231,10 +251,21 @@ class QuestionDeleteListView(APIView):
             cache_delete_pattern("question:list:*")
             # 清除包含这些题目的考试题目缓存
             cache_delete_pattern("exam:questions:*")
+            # 清除考试相关缓存
+            cache_delete_pattern("exam:list:*")
+            cache_delete_pattern("exam:detail:*")
+            cache_delete_pattern("exam:statistics:*")
+            cache_delete_pattern("exam:ranking:*")
+            # 清除班级相关缓存（因为班级统计、排名、趋势都依赖题目）
+            cache_delete_pattern("class:ranking:*")
+            cache_delete_pattern("class:trend:*")
+            cache_delete_pattern("class:statistics:*")
+            # 清除用户统计缓存
+            cache.delete(CACHE_KEY_USER_STATISTICS)
             # 清除系统统计缓存
             cache.delete(CACHE_KEY_SYSTEM_STATISTICS)
-            return MyResponse.success(message="批量删除成功")
 
+            return MyResponse.success(message="批量删除成功")
         return MyResponse.other(code=404, message="请选择要删除的题目")
 
 
